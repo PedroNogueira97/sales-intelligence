@@ -8,6 +8,14 @@ class LeadStatus(str, enum.Enum):
     ERROR = "error"
 
 
+class LeadChannel(str, enum.Enum):
+    """Origem simulada do lead (SPEC.md secao 7) — decidida pelo backend, nunca pelo cliente."""
+
+    MANUAL = "manual"
+    WHATSAPP = "whatsapp"
+    LANDING_PAGE = "landing_page"
+
+
 class Qualification(str, enum.Enum):
     QUALIFIED = "qualified"
     MAYBE = "maybe"

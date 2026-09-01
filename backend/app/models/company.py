@@ -15,6 +15,7 @@ class Company(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(String, nullable=True)
     product_description: Mapped[str | None] = mapped_column(String, nullable=True)
+    products: Mapped[list[dict]] = mapped_column(JSONB, default=list, server_default="[]")
     ideal_customer_profile: Mapped[str | None] = mapped_column(String, nullable=True)
     average_ticket: Mapped[float | None] = mapped_column(Numeric(12, 2), nullable=True)
     pain_points: Mapped[list[str]] = mapped_column(JSONB, default=list, server_default="[]")

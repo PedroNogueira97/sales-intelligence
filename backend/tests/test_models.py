@@ -4,7 +4,14 @@ import pytest
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
-from app.core.enums import Intent, InteractionType, LeadStatus, Qualification, RecommendedAction
+from app.core.enums import (
+    Intent,
+    InteractionType,
+    LeadChannel,
+    LeadStatus,
+    Qualification,
+    RecommendedAction,
+)
 from app.models import Analysis, Company, Interaction, Lead
 
 
@@ -55,6 +62,40 @@ def test_create_lead_defaults_to_new_status(db_session):
     lead = _make_lead(db_session, company)
 
     assert lead.status == LeadStatus.NEW
+
+
+def test_company_products_defaults_to_empty_list(db_session):
+    company = _make_company(db_session)
+
+    assert company.products == []
+
+
+def test_company_products_persist(db_session):
+    products = [
+        {"name": "Acme CRM", "description": "Gestao de funil comercial"},
+        {"name": "Acme Onboarding", "description": None},
+    ]
+    company = _make_company(db_session, products=products)
+
+    assert company.products == products
+
+
+def test_lead_defaults_to_manual_channel(db_session):
+    company = _make_company(db_session)
+    lead = _make_lead(db_session, company)
+
+    assert lead.channel == LeadChannel.MANUAL
+
+
+def test_lead_accepts_whatsapp_channel_without_email(db_session):
+    company = _make_company(db_session)
+    lead = _make_lead(
+        db_session, company, channel=LeadChannel.WHATSAPP, email=None, phone="+5511999999999"
+    )
+
+    assert lead.channel == LeadChannel.WHATSAPP
+    assert lead.email is None
+    assert lead.phone == "+5511999999999"
 
 
 def test_lead_requires_existing_company(db_session):
