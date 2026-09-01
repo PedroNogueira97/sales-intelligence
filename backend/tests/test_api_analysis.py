@@ -22,11 +22,17 @@ def _create_lead(client, **overrides):
     return client.post("/leads", json=payload).json()
 
 
-def _mock_run_lead_analysis(monkeypatch, result: LeadAnalysisResult | None, response_text="Resposta sugerida.", exc=None):
-    def _fake(lead_message, company_context):
+def _mock_run_lead_analysis(
+    monkeypatch,
+    result: LeadAnalysisResult | None,
+    response_text="Resposta sugerida.",
+    call_script="Abrir agradecendo o contato.",
+    exc=None,
+):
+    def _fake(lead_message, company_context, channel):
         if exc is not None:
             raise exc
-        return result, response_text
+        return result, response_text, call_script
 
     monkeypatch.setattr("app.services.analysis_service.run_lead_analysis", _fake)
 
@@ -135,6 +141,25 @@ def test_analyze_marks_lead_as_error_and_does_not_persist_invalid_analysis(clien
     assert InteractionType.ANALYSIS_FAILED in interaction_types
 
 
+def test_analyze_passes_lead_channel_to_graph(client, monkeypatch):
+    _create_company(client)
+    lead = client.post(
+        "/leads/whatsapp", json={"name": "Maria", "phone": "+5511988887777", "message": "Oi"}
+    ).json()
+
+    received_channels = []
+
+    def _fake(lead_message, company_context, channel):
+        received_channels.append(channel)
+        return _result(), "resposta", "roteiro"
+
+    monkeypatch.setattr("app.services.analysis_service.run_lead_analysis", _fake)
+
+    client.post(f"/leads/{lead['id']}/analyze")
+
+    assert received_channels == ["whatsapp"]
+
+
 def test_analyze_returns_404_for_unknown_lead(client, monkeypatch):
     _mock_run_lead_analysis(monkeypatch, result=_result())
 
@@ -155,7 +180,12 @@ def test_get_analysis_returns_404_before_lead_is_analyzed(client):
 def test_get_analysis_reflects_persisted_result_on_reload(client, monkeypatch):
     _create_company(client)
     lead = _create_lead(client)
-    _mock_run_lead_analysis(monkeypatch, _result(), response_text="Olá, vamos agendar uma conversa?")
+    _mock_run_lead_analysis(
+        monkeypatch,
+        _result(),
+        response_text="Olá, vamos agendar uma conversa?",
+        call_script="Perguntar sobre o volume de leads perdidos hoje.",
+    )
 
     client.post(f"/leads/{lead['id']}/analyze")
 
@@ -164,4 +194,5 @@ def test_get_analysis_reflects_persisted_result_on_reload(client, monkeypatch):
 
     assert first == second
     assert second["response"] == "Olá, vamos agendar uma conversa?"
+    assert second["call_script"] == "Perguntar sobre o volume de leads perdidos hoje."
     assert len(second["reasons"]) >= 1

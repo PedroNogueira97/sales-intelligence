@@ -32,7 +32,9 @@ def analyze(db: Session, lead_id: uuid.UUID) -> Lead:
     db.commit()
 
     try:
-        result, response_text = run_lead_analysis(lead.message, _build_company_context(company))
+        result, response_text, call_script = run_lead_analysis(
+            lead.message, _build_company_context(company), lead.channel.value
+        )
     except LLMAnalysisError as exc:
         logger.error("Falha ao analisar lead %s: %s", lead.id, exc)
         lead.status = LeadStatus.ERROR
@@ -60,6 +62,7 @@ def analyze(db: Session, lead_id: uuid.UUID) -> Lead:
         reasons=result.reasons,
         recommended_action=recommended_action,
         response=response_text,
+        call_script=call_script,
     )
     analysis_repository.create(db, analysis)
 
@@ -90,6 +93,7 @@ def _build_company_context(company: Company) -> dict:
         "name": company.name,
         "description": company.description,
         "product_description": company.product_description,
+        "products": company.products,
         "ideal_customer_profile": company.ideal_customer_profile,
         "average_ticket": float(company.average_ticket) if company.average_ticket is not None else None,
         "pain_points": company.pain_points,

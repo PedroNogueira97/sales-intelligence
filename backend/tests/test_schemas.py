@@ -152,3 +152,8 @@ def test_generated_response_accepts_valid_payload():
 def test_generated_response_rejects_empty_call_script():
     with pytest.raises(ValidationError):
         GeneratedResponse(response="Oi, tudo bem?", call_script="")
+
+
+def test_generated_response_rejects_whitespace_only_response():
+    with pytest.raises(ValidationError):
+        GeneratedResponse(response="   ", call_script="Abrir agradecendo o contato.")

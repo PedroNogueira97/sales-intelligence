@@ -29,6 +29,8 @@ class GeneratedResponse(BaseModel):
     formato de email) — a formatação é instrução de prompt, não branching no grafo.
     """
 
+    model_config = ConfigDict(str_strip_whitespace=True)
+
     response: str = Field(min_length=1)
     call_script: str = Field(min_length=1)
 

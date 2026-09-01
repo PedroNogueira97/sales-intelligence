@@ -9,11 +9,12 @@ from app.agents.llm import get_llm
 from app.agents.prompts import (
     ANALYZE_LEAD_SYSTEM_PROMPT,
     ANALYZE_LEAD_USER_PROMPT,
+    CHANNEL_RESPONSE_INSTRUCTIONS,
     GENERATE_RESPONSE_SYSTEM_PROMPT,
     GENERATE_RESPONSE_USER_PROMPT,
 )
 from app.agents.state import LeadAnalysisState
-from app.schemas.analysis import LeadAnalysisResult
+from app.schemas.analysis import GeneratedResponse, LeadAnalysisResult
 
 logger = logging.getLogger(__name__)
 
@@ -44,23 +45,31 @@ def analyze_lead(state: LeadAnalysisState) -> dict:
 def generate_response(state: LeadAnalysisState) -> dict:
     company_context = json.dumps(state["company_context"], ensure_ascii=False, indent=2)
     analysis = json.dumps(state["analysis"], ensure_ascii=False, indent=2)
+    channel_instruction = CHANNEL_RESPONSE_INSTRUCTIONS.get(
+        state["channel"], CHANNEL_RESPONSE_INSTRUCTIONS["manual"]
+    )
     messages = [
         SystemMessage(
             content=GENERATE_RESPONSE_SYSTEM_PROMPT.format(
-                company_context=company_context, analysis=analysis
+                company_context=company_context,
+                analysis=analysis,
+                channel_instruction=channel_instruction,
             )
         ),
         HumanMessage(content=GENERATE_RESPONSE_USER_PROMPT.format(lead_message=state["lead_message"])),
     ]
 
     try:
-        ai_message = get_llm().invoke(messages)
+        structured_llm = get_llm().with_structured_output(GeneratedResponse)
+        result = structured_llm.invoke(messages)
+    except (ValidationError, ValueError) as exc:
+        logger.warning("Saída inválida do LLM em generate_response: %s", exc)
+        raise LLMAnalysisError("O LLM retornou uma resposta em formato inválido.") from exc
     except Exception as exc:
         logger.warning("Falha ao chamar o LLM em generate_response: %s", exc)
         raise LLMAnalysisError("Não foi possível gerar a resposta comercial.") from exc
 
-    content = ai_message.content
-    if not isinstance(content, str) or not content.strip():
-        raise LLMAnalysisError("O LLM retornou uma resposta comercial vazia ou inválida.")
+    if not isinstance(result, GeneratedResponse):
+        raise LLMAnalysisError("O LLM retornou uma resposta em formato inválido.")
 
-    return {"response": content}
+    return {"response": result.response, "call_script": result.call_script}

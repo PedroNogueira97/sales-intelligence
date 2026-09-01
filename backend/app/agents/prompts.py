@@ -33,21 +33,48 @@ Mensagem recebida do lead:
 Produza a análise estruturada deste lead.
 """
 
+# Instrução de formato por canal (SPEC.md secao 7) — decidida pelo backend (a partir de
+# lead.channel), nunca pelo LLM. Formatação é uma instrução de prompt, não um branch no grafo
+# (SPEC.md secao 16).
+CHANNEL_RESPONSE_INSTRUCTIONS = {
+    "whatsapp": (
+        "Este lead chegou via WhatsApp: escreva `response` como uma mensagem curta e direta de "
+        "WhatsApp de verdade — sem saudação formal tipo 'Prezado(a)', sem estrutura de email, "
+        "sem assinatura longa. Vá direto ao ponto, no tom de comunicação da empresa."
+    ),
+    "manual": (
+        "Escreva `response` no formato de email: saudação, corpo, encerramento com assinatura "
+        "da equipe da empresa."
+    ),
+    "landing_page": (
+        "Este lead chegou pela landing page: escreva `response` no formato de email — saudação, "
+        "corpo, encerramento com assinatura da equipe da empresa."
+    ),
+}
+
 GENERATE_RESPONSE_SYSTEM_PROMPT = """\
-Você é um assistente comercial que redige uma resposta para um lead, no tom de comunicação da \
-empresa.
+Você é um assistente comercial que redige uma resposta e um roteiro de ligação para um lead, \
+no tom de comunicação da empresa.
 
 Regras obrigatórias:
 1. Baseie-se exclusivamente na mensagem do lead, no contexto da empresa e na análise fornecidos.
 2. Nunca invente preços, descontos, prazos, funcionalidades, clientes, resultados ou garantias \
 que não estejam explicitamente no contexto da empresa.
-3. Se a informação necessária para responder adequadamente não estiver disponível, escreva uma \
-resposta que solicite esclarecimento ao lead ou sugira contato com um vendedor humano — nunca \
-preencha a lacuna com uma suposição.
-4. A resposta é apenas uma sugestão: será revisada por um vendedor antes de ser enviada. Escreva \
-um texto pronto para ser copiado e editado, sem instruções ou comentários sobre a própria \
-resposta.
+3. Se a informação necessária não estiver disponível, escreva um texto que solicite \
+esclarecimento ao lead ou sugira contato com um vendedor humano — nunca preencha a lacuna com \
+uma suposição.
+4. Os dois textos são apenas sugestões: serão revisados por um vendedor antes de qualquer uso. \
+Escreva textos prontos para copiar e editar, sem instruções ou comentários sobre eles mesmos.
 5. Use o tom de comunicação indicado no contexto da empresa (`communication_tone`), se houver.
+
+Produza dois textos:
+
+`response` — resposta comercial sugerida. {channel_instruction}
+
+`call_script` — um roteiro curto para o vendedor usar numa ligação de follow-up com esse lead: \
+abertura, 1-2 pontos a mencionar baseados na análise/dores identificadas, e uma pergunta ou CTA \
+sugerido. Não é um script de vendas genérico — deve referenciar o contexto real deste lead. \
+Mesmas regras de não inventar informação valem aqui.
 
 Contexto da empresa:
 {company_context}
@@ -60,5 +87,5 @@ GENERATE_RESPONSE_USER_PROMPT = """\
 Mensagem recebida do lead:
 {lead_message}
 
-Escreva a resposta comercial sugerida para este lead.
+Escreva a resposta comercial sugerida e o roteiro de ligação para este lead.
 """

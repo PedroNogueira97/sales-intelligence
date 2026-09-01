@@ -13,21 +13,27 @@ _builder.add_edge("generate_response", END)
 _graph = _builder.compile()
 
 
-def run_lead_analysis(lead_message: str, company_context: dict) -> tuple[LeadAnalysisResult, str]:
+def run_lead_analysis(
+    lead_message: str, company_context: dict, channel: str
+) -> tuple[LeadAnalysisResult, str, str]:
     """Ponto de entrada único do grafo para a service layer.
 
     Mantém `StateGraph`/`invoke` encapsulados no módulo `agents` — a service layer
     (app.services.analysis_service) não conhece LangGraph, só recebe o resultado
-    estruturado já validado e o texto da resposta comercial.
+    estruturado já validado, o texto da resposta comercial (formatado de acordo com
+    `channel`, SPEC.md secao 7) e o roteiro de ligação sugerido.
     """
     initial_state: LeadAnalysisState = {
         "lead_id": "",
         "lead_message": lead_message,
         "company_context": company_context,
+        "channel": channel,
         "analysis": None,
         "response": None,
+        "call_script": None,
     }
     final_state = _graph.invoke(initial_state)
     analysis = LeadAnalysisResult.model_validate(final_state["analysis"])
     response = final_state["response"]
-    return analysis, response
+    call_script = final_state["call_script"]
+    return analysis, response, call_script

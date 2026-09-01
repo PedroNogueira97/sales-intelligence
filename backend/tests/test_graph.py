@@ -1,21 +1,20 @@
-from types import SimpleNamespace
-
 import pytest
 
 from app.agents.exceptions import LLMAnalysisError
 from app.agents.graph import run_lead_analysis
 from app.core.enums import Intent, Qualification, RecommendedAction
-from app.schemas.analysis import LeadAnalysisResult
+from app.schemas.analysis import GeneratedResponse, LeadAnalysisResult
 
 COMPANY_CONTEXT = {
     "name": "Acme Sales",
     "product_description": "Plataforma de automação comercial",
+    "products": [{"name": "Acme CRM", "description": "Gestao de funil comercial"}],
     "ideal_customer_profile": "Empresas B2B com 20-500 funcionários",
     "pain_points": ["perda de leads", "follow-up manual"],
     "communication_tone": "professional",
 }
 
-VALID_RESULT = LeadAnalysisResult(
+VALID_ANALYSIS = LeadAnalysisResult(
     qualification=Qualification.QUALIFIED,
     score=87,
     confidence=0.91,
@@ -23,6 +22,11 @@ VALID_RESULT = LeadAnalysisResult(
     pain_points=["perda de leads"],
     reasons=["Empresa dentro do ICP", "Problema compatível com o produto"],
     recommended_action=RecommendedAction.SCHEDULE_DEMO,
+)
+
+VALID_GENERATED = GeneratedResponse(
+    response="Olá! Obrigado pelo contato, vamos agendar uma demonstração.",
+    call_script="Abrir agradecendo o contato e confirmar o nome da empresa.",
 )
 
 
@@ -38,19 +42,22 @@ class _FakeStructuredLLM:
 
 
 class _FakeLLM:
-    def __init__(self, structured_result=None, structured_exc=None, plain_content=None, plain_exc=None):
-        self._structured_result = structured_result
-        self._structured_exc = structured_exc
-        self._plain_content = plain_content
-        self._plain_exc = plain_exc
+    """Simula um chat model: cada schema pedido via `with_structured_output` recebe seu
+    próprio resultado/exceção mockados — analyze_lead pede `LeadAnalysisResult`,
+    generate_response pede `GeneratedResponse`."""
+
+    def __init__(self, analysis_result=None, analysis_exc=None, response_result=None, response_exc=None):
+        self._analysis_result = analysis_result
+        self._analysis_exc = analysis_exc
+        self._response_result = response_result
+        self._response_exc = response_exc
 
     def with_structured_output(self, schema):
-        return _FakeStructuredLLM(result=self._structured_result, exc=self._structured_exc)
-
-    def invoke(self, messages):
-        if self._plain_exc is not None:
-            raise self._plain_exc
-        return SimpleNamespace(content=self._plain_content)
+        if schema is LeadAnalysisResult:
+            return _FakeStructuredLLM(result=self._analysis_result, exc=self._analysis_exc)
+        if schema is GeneratedResponse:
+            return _FakeStructuredLLM(result=self._response_result, exc=self._response_exc)
+        raise AssertionError(f"schema inesperado: {schema}")
 
 
 def _patch_llm(monkeypatch, **kwargs):
@@ -58,48 +65,56 @@ def _patch_llm(monkeypatch, **kwargs):
     monkeypatch.setattr("app.agents.nodes.get_llm", lambda: fake)
 
 
-def test_run_lead_analysis_returns_valid_structured_result(monkeypatch):
-    _patch_llm(
-        monkeypatch,
-        structured_result=VALID_RESULT,
-        plain_content="Olá! Obrigado pelo contato, vamos agendar uma demonstração.",
-    )
+def test_run_lead_analysis_returns_valid_structured_result_and_call_script(monkeypatch):
+    _patch_llm(monkeypatch, analysis_result=VALID_ANALYSIS, response_result=VALID_GENERATED)
 
-    analysis, response = run_lead_analysis("Preciso de ajuda com meus leads", COMPANY_CONTEXT)
+    analysis, response, call_script = run_lead_analysis(
+        "Preciso de ajuda com meus leads", COMPANY_CONTEXT, channel="manual"
+    )
 
     assert isinstance(analysis, LeadAnalysisResult)
     assert 0 <= analysis.score <= 100
     assert analysis.qualification == Qualification.QUALIFIED
-    assert response == "Olá! Obrigado pelo contato, vamos agendar uma demonstração."
+    assert response == VALID_GENERATED.response
+    assert call_script == VALID_GENERATED.call_script
 
 
-def test_run_lead_analysis_raises_llm_analysis_error_on_invalid_structured_output(monkeypatch):
-    _patch_llm(monkeypatch, structured_result={"score": 999}, plain_content="ignorado")
+@pytest.mark.parametrize("channel", ["manual", "whatsapp", "landing_page"])
+def test_run_lead_analysis_works_for_every_channel(monkeypatch, channel):
+    _patch_llm(monkeypatch, analysis_result=VALID_ANALYSIS, response_result=VALID_GENERATED)
+
+    analysis, response, call_script = run_lead_analysis("mensagem", COMPANY_CONTEXT, channel=channel)
+
+    assert response and call_script
+
+
+def test_run_lead_analysis_raises_llm_analysis_error_on_invalid_analysis_output(monkeypatch):
+    _patch_llm(monkeypatch, analysis_result={"score": 999}, response_result=VALID_GENERATED)
 
     with pytest.raises(LLMAnalysisError):
-        run_lead_analysis("mensagem", COMPANY_CONTEXT)
+        run_lead_analysis("mensagem", COMPANY_CONTEXT, channel="manual")
 
 
-def test_run_lead_analysis_raises_llm_analysis_error_on_structured_call_failure(monkeypatch):
-    _patch_llm(monkeypatch, structured_exc=TimeoutError("timeout"), plain_content="ignorado")
+def test_run_lead_analysis_raises_llm_analysis_error_on_analysis_call_failure(monkeypatch):
+    _patch_llm(monkeypatch, analysis_exc=TimeoutError("timeout"), response_result=VALID_GENERATED)
 
     with pytest.raises(LLMAnalysisError):
-        run_lead_analysis("mensagem", COMPANY_CONTEXT)
+        run_lead_analysis("mensagem", COMPANY_CONTEXT, channel="manual")
 
 
 def test_run_lead_analysis_raises_llm_analysis_error_when_response_generation_fails(monkeypatch):
+    _patch_llm(monkeypatch, analysis_result=VALID_ANALYSIS, response_exc=ConnectionError("indisponível"))
+
+    with pytest.raises(LLMAnalysisError):
+        run_lead_analysis("mensagem", COMPANY_CONTEXT, channel="manual")
+
+
+def test_run_lead_analysis_raises_llm_analysis_error_on_invalid_response_output(monkeypatch):
     _patch_llm(
         monkeypatch,
-        structured_result=VALID_RESULT,
-        plain_exc=ConnectionError("indisponível"),
+        analysis_result=VALID_ANALYSIS,
+        response_result={"response": "", "call_script": "x"},
     )
 
     with pytest.raises(LLMAnalysisError):
-        run_lead_analysis("mensagem", COMPANY_CONTEXT)
-
-
-def test_run_lead_analysis_raises_llm_analysis_error_on_empty_response(monkeypatch):
-    _patch_llm(monkeypatch, structured_result=VALID_RESULT, plain_content="   ")
-
-    with pytest.raises(LLMAnalysisError):
-        run_lead_analysis("mensagem", COMPANY_CONTEXT)
+        run_lead_analysis("mensagem", COMPANY_CONTEXT, channel="manual")
