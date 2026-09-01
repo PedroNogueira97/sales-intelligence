@@ -22,6 +22,13 @@ class LeadAnalysisResult(BaseModel):
     recommended_action: RecommendedAction
 
 
+class AnalyzeResponse(BaseModel):
+    """Corpo de resposta de POST /leads/{lead_id}/analyze (SPEC.md secao 21)."""
+
+    lead_id: uuid.UUID
+    status: str
+
+
 class AnalysisRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
