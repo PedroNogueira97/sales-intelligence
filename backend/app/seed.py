@@ -1,4 +1,4 @@
-"""Seed de dados fictícios para demonstração e testes manuais (SPEC.md secao 26).
+"""Seed de dados fictícios para demonstração e testes manuais (SPEC.md secao 29).
 
 Uso:
     python -m app.seed
@@ -8,23 +8,36 @@ from app.core.db import SessionLocal
 from app.core.enums import LeadChannel
 from app.repositories import company_repository
 from app.schemas.company import CompanyCreate
-from app.schemas.lead import LeadCreate
+from app.schemas.lead import LandingPageLeadCreate, LeadCreate, WhatsAppLeadCreate
 from app.services import company_service, lead_service
 
 COMPANY = CompanyCreate(
     name="Acme Sales",
     description="Empresa de tecnologia comercial B2B",
     product_description="Plataforma de automação comercial",
+    products=[
+        {"name": "Acme CRM", "description": "Gestão de funil comercial e follow-up"},
+        {"name": "Acme Onboarding", "description": "Consultoria de implantação e treinamento"},
+    ],
     ideal_customer_profile="Empresas B2B com 20-500 funcionários",
     average_ticket=10000,
     pain_points=["perda de leads", "follow-up manual", "baixa produtividade comercial"],
     communication_tone="professional",
 )
 
-# Cada lead cobre um cenário de SPEC.md secao 26.
+_SCHEMA_BY_CHANNEL = {
+    LeadChannel.MANUAL: LeadCreate,
+    LeadChannel.WHATSAPP: WhatsAppLeadCreate,
+    LeadChannel.LANDING_PAGE: LandingPageLeadCreate,
+}
+
+# Cada lead cobre um cenário de SPEC.md secao 29, com canal variado (manual/whatsapp/landing_page)
+# — os campos disponíveis mudam por canal (WhatsApp não tem email, nenhum dos dois simulados tem
+# company_name, ver schemas em app/schemas/lead.py).
 LEADS: list[dict] = [
-    # 1. claramente qualificado
+    # 1. claramente qualificado — manual
     {
+        "channel": LeadChannel.MANUAL,
         "name": "Marina Alves",
         "email": "marina.alves@techcorp.com.br",
         "company_name": "TechCorp Soluções",
@@ -34,22 +47,23 @@ LEADS: list[dict] = [
             "o quanto antes, temos orçamento aprovado para esse trimestre."
         ),
     },
-    # 2. claramente fora do ICP
+    # 2. claramente fora do ICP — whatsapp
     {
+        "channel": LeadChannel.WHATSAPP,
         "name": "Pedro Lima",
-        "email": "pedro@microloja.com",
-        "company_name": "Microloja do Pedro",
+        "phone": "+5511911112222",
         "message": "Oi, sou autônomo, vendo produtos artesanais sozinho, vi o anúncio de vocês. Quanto custa?",
     },
-    # 3. sem informações suficientes
+    # 3. sem informações suficientes — landing page
     {
+        "channel": LeadChannel.LANDING_PAGE,
         "name": "Ana",
         "email": "ana@example.com",
-        "company_name": None,
         "message": "Oi, tudo bem? Queria saber mais.",
     },
-    # 4. interessado mas sem urgência
+    # 4. interessado mas sem urgência — manual
     {
+        "channel": LeadChannel.MANUAL,
         "name": "Carlos Souza",
         "email": "carlos.souza@industriabeta.com.br",
         "company_name": "Indústria Beta",
@@ -58,49 +72,51 @@ LEADS: list[dict] = [
             "comercial para o próximo ano, ainda sem pressa, só pesquisando opções."
         ),
     },
-    # 5. alta urgência
+    # 5. alta urgência — whatsapp
     {
+        "channel": LeadChannel.WHATSAPP,
         "name": "Fernanda Costa",
-        "email": "fernanda@growthly.com.br",
-        "company_name": "Growthly",
+        "phone": "+5511922223333",
         "message": (
             "Precisamos resolver isso essa semana, estamos perdendo leads todos os dias por "
             "falta de organização no funil. Temos 80 funcionários, podem me ligar hoje?"
         ),
     },
-    # 6. perguntando preço
+    # 6. perguntando preço — landing page
     {
+        "channel": LeadChannel.LANDING_PAGE,
         "name": "Rafael Nunes",
         "email": "rafael@vendasmax.com.br",
-        "company_name": "VendasMax",
         "message": "Qual o valor da mensalidade de vocês? Quantos usuários entram no plano básico?",
     },
-    # 7. pedindo demonstração
+    # 7. pedindo demonstração — manual
     {
+        "channel": LeadChannel.MANUAL,
         "name": "Juliana Prado",
         "email": "juliana.prado@b2bsolutions.com",
         "company_name": "B2B Solutions",
         "message": "Podemos agendar uma demonstração do produto para a nossa equipe comercial?",
     },
-    # 8. sem informar empresa
+    # 8. sem informar empresa — whatsapp
     {
+        "channel": LeadChannel.WHATSAPP,
         "name": "Diego Martins",
-        "email": "diego.martins@gmail.com",
-        "company_name": None,
+        "phone": "+5511933334444",
         "message": "Vi vocês no LinkedIn, trabalho com vendas e queria entender melhor o produto.",
     },
-    # 9. problema incompatível
+    # 9. problema incompatível — landing page
     {
+        "channel": LeadChannel.LANDING_PAGE,
         "name": "Larissa Melo",
         "email": "larissa@fabricadecalcados.com.br",
-        "company_name": "Fábrica de Calçados Melo",
         "message": (
             "Estamos com problema na linha de produção, as máquinas estão quebrando muito. "
             "Vocês resolvem isso?"
         ),
     },
-    # 10. ambíguo
+    # 10. ambíguo — manual
     {
+        "channel": LeadChannel.MANUAL,
         "name": "Bruno Teixeira",
         "email": "bruno.teixeira@empresaxyz.com",
         "company_name": "Empresa XYZ",
@@ -118,12 +134,14 @@ def run() -> None:
             return
 
         company = company_service.create(db, COMPANY)
-        print(f"Empresa criada: {company.name} (id={company.id})")
+        print(f"Empresa criada: {company.name} (id={company.id}), {len(company.products)} produtos")
 
         for lead_data in LEADS:
-            # canal variado nos leads de seed: ver Fase 6 do TASKS.md
-            lead = lead_service.create(db, LeadCreate(**lead_data), channel=LeadChannel.MANUAL)
-            print(f"Lead criado: {lead.name} (id={lead.id}, status={lead.status.value})")
+            channel = lead_data["channel"]
+            fields = {k: v for k, v in lead_data.items() if k != "channel"}
+            schema_cls = _SCHEMA_BY_CHANNEL[channel]
+            lead = lead_service.create(db, schema_cls(**fields), channel=channel)
+            print(f"Lead criado: {lead.name} (canal={channel.value}, id={lead.id})")
     finally:
         db.close()
 
