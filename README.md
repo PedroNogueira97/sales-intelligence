@@ -3,9 +3,11 @@
 MVP de uma plataforma de inteligência e automação de processos comerciais, focado em um único
 caso de uso: **qualificação de leads**.
 
-O sistema recebe uma mensagem de um lead e produz uma análise comercial estruturada: score,
-qualificação, motivos, dores identificadas, intenção de compra, próxima ação recomendada e uma
-resposta comercial sugerida — sempre revisável por um humano antes de qualquer envio.
+O sistema recebe uma mensagem de um lead — cadastrada manualmente ou vinda de um canal simulado
+(WhatsApp, landing page fake) — e produz uma análise comercial estruturada: score, qualificação,
+motivos, dores identificadas, intenção de compra, próxima ação recomendada, uma resposta
+comercial sugerida (formatada de acordo com o canal) e um roteiro de ligação — sempre revisável
+por um humano antes de qualquer envio.
 
 Este não é um CRM, nem um agente de IA genérico, nem um BPMS. É um experimento de negócio para
 validar se essa análise é suficientemente útil para entrar no processo comercial de uma empresa.
@@ -82,9 +84,10 @@ Com os containers no ar, em outro terminal:
 docker compose exec backend python -m app.seed
 ```
 
-Cria a empresa fictícia "Acme Sales" e 10 leads cobrindo diferentes cenários (qualificado, fora
-do ICP, sem informação suficiente, alta urgência, pergunta de preço, etc. — ver
-`backend/app/seed.py`). O comando é idempotente: rodar de novo não duplica os dados.
+Cria a empresa fictícia "Acme Sales" (com 2 produtos de exemplo) e 10 leads cobrindo diferentes
+cenários (qualificado, fora do ICP, sem informação suficiente, alta urgência, pergunta de preço,
+etc.), distribuídos entre os 3 canais (manual/WhatsApp/landing page) — ver `backend/app/seed.py`.
+O comando é idempotente: rodar de novo não duplica os dados.
 
 ### 4. Subir o frontend
 
@@ -100,13 +103,29 @@ Acesse `http://localhost:5173`.
 
 ### 5. Testar o fluxo completo
 
-No frontend: Dashboard → "Empresa" (configure uma única vez o contexto comercial: produto, ICP,
-dores, tom — usado para analisar todos os leads) → "Novo lead" (só nome, email, empresa do lead
-e mensagem, sem precisar de nenhum ID) → abra o lead → "Executar análise" → veja score, motivos,
-dores, próxima ação e resposta sugerida. Ou pule os cadastros e use os leads do seed em "Leads".
+No frontend: Dashboard → "Empresa" (configure uma única vez o contexto comercial: produtos/
+serviços, ICP, dores, tom — usado para analisar todos os leads) → "Novo lead" (só nome, email,
+empresa do lead e mensagem, sem precisar de nenhum ID) → abra o lead → "Executar análise" → veja
+score, motivos, dores, próxima ação, resposta sugerida e roteiro de ligação. Ou pule os cadastros
+e use os leads do seed em "Leads".
 
 **Atenção**: "Executar análise" faz uma chamada real à API da OpenAI (custo e latência reais,
 ~5-10s por análise).
+
+### 6. Simular leads vindos de outros canais
+
+Este MVP simula (não integra de verdade) leads chegando por diferentes canais, para testar se a
+resposta formatada por canal + roteiro de ligação agregam valor — sem custo nem conta de
+provedor nenhuma:
+
+- **WhatsApp**: link "Simular WhatsApp" no menu do dashboard (`/simulate/whatsapp`) — formulário
+  interno de nome/telefone/mensagem. Não é uma integração real com o WhatsApp (sem Meta Cloud
+  API, Twilio, etc.), só gera um lead marcado com esse canal.
+- **Landing page**: link "Landing page ↗" no menu (abre `/lp` em nova aba) — uma página pública
+  fake, sem o layout do dashboard, simulando um site externo de captura de leads.
+
+Leads desses canais recebem resposta sugerida formatada de forma diferente na análise: WhatsApp
+vira um texto curto e direto; os demais canais (manual, landing page) viram formato de email.
 
 ## Rodando o backend fora do Docker (desenvolvimento)
 
@@ -140,16 +159,21 @@ acima.
 
 ```text
 POST /companies                    cria a empresa (única por instalação; 409 se já existir)
-GET  /companies                    retorna a empresa configurada (404 se ainda não existir)
-PUT  /companies                    atualiza a empresa configurada
+GET  /companies                    retorna a empresa configurada, incl. produtos (404 se não existir)
+PUT  /companies                    atualiza a empresa configurada (incl. produtos)
 
-POST /leads                        cria lead (status inicial "new")
+POST /leads                        cria lead manualmente (canal "manual")
+POST /leads/whatsapp               simula lead vindo do WhatsApp (canal "whatsapp", sem email)
+POST /leads/landing-page           simula lead vindo da landing page fake (canal "landing_page")
 GET  /leads                        lista leads, ordenados por score desc
 GET  /leads/{lead_id}              retorna lead + análise mais recente
 
 POST /leads/{lead_id}/analyze      executa a análise (LangGraph + regras determinísticas)
-GET  /leads/{lead_id}/analysis     retorna a análise persistida
+GET  /leads/{lead_id}/analysis     retorna a análise persistida (resposta + roteiro de ligação)
 ```
+
+O canal (`channel`) de um lead é sempre decidido pelo backend a partir do endpoint usado para
+criá-lo — não é um campo que o cliente da API escolhe.
 
 Falha do LLM (timeout, indisponibilidade, saída inválida) marca o lead como `error` e nunca
 persiste uma análise inválida — a API responde com uma mensagem amigável, sem stack trace.
@@ -169,10 +193,11 @@ backend/app/
 
 ## O que este MVP não faz (por decisão de escopo)
 
-Sem envio automático de mensagens, sem WhatsApp/email, sem CRM completo, sem múltiplos agentes,
-sem RAG/vector database, sem workflow builder. Toda resposta comercial é apenas sugerida — um
-humano decide se edita e envia. Ver a documentação de contexto do projeto para a lista completa
-e o racional.
+Sem envio automático de mensagens, sem integração real com WhatsApp (Meta Cloud API, Twilio,
+etc. — os canais de WhatsApp/landing page deste MVP são 100% simulados, só para testar o valor
+da formatação por canal), sem CRM completo, sem múltiplos agentes, sem RAG/vector database, sem
+workflow builder. Toda resposta comercial é apenas sugerida — um humano decide se edita e envia.
+Ver a documentação de contexto do projeto para a lista completa e o racional.
 
 ## Documentação de contexto (não versionada)
 
