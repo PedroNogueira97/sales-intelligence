@@ -1,4 +1,5 @@
 export type LeadStatus = "new" | "processing" | "analyzed" | "error";
+export type LeadChannel = "manual" | "whatsapp" | "landing_page";
 export type Qualification = "qualified" | "maybe" | "unqualified";
 export type Intent = "high" | "medium" | "low" | "unknown";
 export type RecommendedAction =
@@ -60,6 +61,7 @@ export interface Analysis {
   reasons: string[];
   recommended_action: RecommendedAction;
   response: string | null;
+  call_script: string | null;
   created_at: string;
 }
 
@@ -67,9 +69,11 @@ export interface Lead {
   id: string;
   company_id: string;
   name: string;
-  email: string;
+  email: string | null;
+  phone: string | null;
   company_name: string | null;
   message: string;
+  channel: LeadChannel;
   status: LeadStatus;
   created_at: string;
   updated_at: string;

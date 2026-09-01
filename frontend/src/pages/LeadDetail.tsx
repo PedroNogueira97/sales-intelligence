@@ -11,6 +11,18 @@ const RECOMMENDED_ACTION_LABEL: Record<string, string> = {
   discard: "Descartar",
 };
 
+const CHANNEL_LABEL: Record<string, string> = {
+  manual: "Manual",
+  whatsapp: "WhatsApp",
+  landing_page: "Landing page",
+};
+
+const RESPONSE_FORMAT_LABEL: Record<string, string> = {
+  whatsapp: "WhatsApp",
+  manual: "Email",
+  landing_page: "Email",
+};
+
 export default function LeadDetail() {
   const { leadId } = useParams<{ leadId: string }>();
   const [lead, setLead] = useState<LeadDetailType | null>(null);
@@ -19,6 +31,7 @@ export default function LeadDetail() {
   const [editedResponse, setEditedResponse] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [copiedScript, setCopiedScript] = useState(false);
 
   function load() {
     if (!leadId) return;
@@ -56,6 +69,17 @@ export default function LeadDetail() {
     }
   }
 
+  async function handleCopyScript() {
+    if (!lead?.analysis?.call_script) return;
+    try {
+      await navigator.clipboard.writeText(lead.analysis.call_script);
+      setCopiedScript(true);
+      setTimeout(() => setCopiedScript(false), 2000);
+    } catch {
+      setError("Não foi possível copiar automaticamente. Selecione o texto manualmente.");
+    }
+  }
+
   if (error && !lead) return <p className="error">Erro ao carregar lead: {error}</p>;
   if (!lead) return <p>Carregando...</p>;
 
@@ -67,8 +91,20 @@ export default function LeadDetail() {
       <dl className="lead-info">
         <dt>Empresa</dt>
         <dd>{lead.company_name ?? "não informado"}</dd>
-        <dt>Email</dt>
-        <dd>{lead.email}</dd>
+        <dt>Canal</dt>
+        <dd>{CHANNEL_LABEL[lead.channel]}</dd>
+        {lead.email && (
+          <>
+            <dt>Email</dt>
+            <dd>{lead.email}</dd>
+          </>
+        )}
+        {lead.phone && (
+          <>
+            <dt>Telefone</dt>
+            <dd>{lead.phone}</dd>
+          </>
+        )}
         <dt>Mensagem original</dt>
         <dd>{lead.message}</dd>
       </dl>
@@ -121,7 +157,7 @@ export default function LeadDetail() {
           </div>
 
           <div className="block">
-            <h2>RESPOSTA SUGERIDA</h2>
+            <h2>RESPOSTA SUGERIDA ({RESPONSE_FORMAT_LABEL[lead.channel]})</h2>
             {isEditing ? (
               <textarea
                 value={editedResponse}
@@ -138,6 +174,16 @@ export default function LeadDetail() {
               <button onClick={handleCopy}>{copied ? "Copiado!" : "Copiar"}</button>
             </div>
           </div>
+
+          {analysis.call_script && (
+            <div className="block">
+              <h2>ROTEIRO PARA LIGAÇÃO</h2>
+              <p className="response-text">{analysis.call_script}</p>
+              <div className="actions">
+                <button onClick={handleCopyScript}>{copiedScript ? "Copiado!" : "Copiar"}</button>
+              </div>
+            </div>
+          )}
         </>
       )}
     </section>

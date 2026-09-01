@@ -10,6 +10,12 @@ const STATUS_LABEL: Record<string, string> = {
   error: "Erro",
 };
 
+const CHANNEL_LABEL: Record<string, string> = {
+  manual: "Manual",
+  whatsapp: "WhatsApp",
+  landing_page: "Landing page",
+};
+
 export default function LeadsList() {
   const [leads, setLeads] = useState<LeadDetail[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +52,7 @@ export default function LeadsList() {
           <tr>
             <th>Nome</th>
             <th>Empresa</th>
+            <th>Canal</th>
             <th>Score</th>
             <th>Qualificação</th>
             <th>Intenção</th>
@@ -61,6 +68,7 @@ export default function LeadsList() {
                 <Link to={`/leads/${lead.id}`}>{lead.name}</Link>
               </td>
               <td>{lead.company_name ?? "—"}</td>
+              <td>{CHANNEL_LABEL[lead.channel]}</td>
               <td>{lead.analysis?.score ?? "—"}</td>
               <td>{lead.analysis?.qualification ?? "—"}</td>
               <td>{lead.analysis?.intent ?? "—"}</td>
