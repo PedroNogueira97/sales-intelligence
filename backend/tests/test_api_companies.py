@@ -58,6 +58,23 @@ def test_get_company_returns_configured_company(client):
     assert body["pain_points"] == ["perda de leads"]
 
 
+def test_get_company_reflects_products(client):
+    client.post(
+        "/companies",
+        json={
+            "name": "Acme Sales",
+            "products": [{"name": "Acme CRM", "description": "Gestao de funil comercial"}],
+        },
+    )
+
+    response = client.get("/companies")
+
+    assert response.status_code == 200
+    assert response.json()["products"] == [
+        {"name": "Acme CRM", "description": "Gestao de funil comercial"}
+    ]
+
+
 def test_get_company_returns_404_when_not_configured(client):
     response = client.get("/companies")
 

@@ -79,6 +79,7 @@ def test_analyze_qualified_lead_persists_high_score_and_schedules_demo(client, d
     assert analysis.qualification == Qualification.QUALIFIED
     # regra determinística vence a sugestão do LLM (IA sugere, sistema decide)
     assert analysis.recommended_action == RecommendedAction.SCHEDULE_DEMO
+    assert analysis.call_script
 
     interaction_types = {
         i.type for i in db_session.query(Interaction).filter(Interaction.lead_id == db_lead.id).all()
