@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { createCompany, getCompany, updateCompany } from "../api";
-import type { Company } from "../types";
+import type { Company, Product } from "../types";
 
 export default function CompanySettings() {
   const [company, setCompany] = useState<Company | null>(null);
@@ -9,6 +9,7 @@ export default function CompanySettings() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [productDescription, setProductDescription] = useState("");
+  const [products, setProducts] = useState<Product[]>([]);
   const [idealCustomerProfile, setIdealCustomerProfile] = useState("");
   const [averageTicket, setAverageTicket] = useState("");
   const [painPoints, setPainPoints] = useState("");
@@ -22,6 +23,7 @@ export default function CompanySettings() {
     setName(data.name);
     setDescription(data.description ?? "");
     setProductDescription(data.product_description ?? "");
+    setProducts(data.products);
     setIdealCustomerProfile(data.ideal_customer_profile ?? "");
     setAverageTicket(data.average_ticket?.toString() ?? "");
     setPainPoints(data.pain_points.join(", "));
@@ -38,6 +40,20 @@ export default function CompanySettings() {
       .finally(() => setLoading(false));
   }, []);
 
+  function addProduct() {
+    setProducts((prev) => [...prev, { name: "", description: "" }]);
+  }
+
+  function removeProduct(index: number) {
+    setProducts((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  function updateProduct(index: number, field: keyof Product, value: string) {
+    setProducts((prev) =>
+      prev.map((product, i) => (i === index ? { ...product, [field]: value } : product))
+    );
+  }
+
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
@@ -47,6 +63,9 @@ export default function CompanySettings() {
       name,
       description: description || null,
       product_description: productDescription || null,
+      products: products
+        .filter((p) => p.name.trim())
+        .map((p) => ({ name: p.name.trim(), description: p.description?.trim() || null })),
       ideal_customer_profile: idealCustomerProfile || null,
       average_ticket: averageTicket ? Number(averageTicket) : null,
       pain_points: painPoints
@@ -59,6 +78,7 @@ export default function CompanySettings() {
       const wasCreate = company === null;
       const result = wasCreate ? await createCompany(payload) : await updateCompany(payload);
       setCompany(result);
+      setProducts(result.products);
       setSaved(true);
       setJustCreated(wasCreate);
     } catch (err) {
@@ -74,7 +94,7 @@ export default function CompanySettings() {
     <section>
       <h1>Empresa</h1>
       <p>
-        Este é o contexto comercial usado para analisar todos os leads: produto, perfil de
+        Este é o contexto comercial usado para analisar todos os leads: produtos, perfil de
         cliente ideal, dores e tom de comunicação. Configurado uma única vez por instalação.
       </p>
       <form onSubmit={handleSubmit} className="form">
@@ -87,12 +107,37 @@ export default function CompanySettings() {
           <textarea value={description} onChange={(e) => setDescription(e.target.value)} />
         </label>
         <label>
-          Produto/serviço
+          Resumo geral do produto/serviço
           <textarea
             value={productDescription}
             onChange={(e) => setProductDescription(e.target.value)}
           />
         </label>
+
+        <div>
+          <span className="form-section-label">Produtos/serviços</span>
+          {products.map((product, index) => (
+            <div className="product-row" key={index}>
+              <input
+                value={product.name}
+                onChange={(e) => updateProduct(index, "name", e.target.value)}
+                placeholder="Nome do produto"
+              />
+              <input
+                value={product.description ?? ""}
+                onChange={(e) => updateProduct(index, "description", e.target.value)}
+                placeholder="Descrição (opcional)"
+              />
+              <button type="button" onClick={() => removeProduct(index)}>
+                Remover
+              </button>
+            </div>
+          ))}
+          <button type="button" onClick={addProduct}>
+            + Adicionar produto
+          </button>
+        </div>
+
         <label>
           Perfil de cliente ideal (ICP)
           <textarea

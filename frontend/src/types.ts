@@ -8,11 +8,17 @@ export type RecommendedAction =
   | "nurturing"
   | "discard";
 
+export interface Product {
+  name: string;
+  description?: string | null;
+}
+
 export interface Company {
   id: string;
   name: string;
   description: string | null;
   product_description: string | null;
+  products: Product[];
   ideal_customer_profile: string | null;
   average_ticket: number | null;
   pain_points: string[];
@@ -25,6 +31,7 @@ export interface CompanyCreate {
   name: string;
   description?: string | null;
   product_description?: string | null;
+  products?: Product[];
   ideal_customer_profile?: string | null;
   average_ticket?: number | null;
   pain_points?: string[];
@@ -35,6 +42,7 @@ export interface CompanyUpdate {
   name?: string;
   description?: string | null;
   product_description?: string | null;
+  products?: Product[];
   ideal_customer_profile?: string | null;
   average_ticket?: number | null;
   pain_points?: string[];
