@@ -1,0 +1,22 @@
+import uuid
+from datetime import datetime
+
+from pydantic import BaseModel, ConfigDict, Field
+
+
+class CompanyCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=255)
+    description: str | None = None
+    product_description: str | None = None
+    ideal_customer_profile: str | None = None
+    average_ticket: float | None = Field(default=None, ge=0)
+    pain_points: list[str] = Field(default_factory=list)
+    communication_tone: str | None = None
+
+
+class CompanyRead(CompanyCreate):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
