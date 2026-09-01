@@ -1,9 +1,9 @@
 import pytest
 from pydantic import ValidationError
 
-from app.schemas.analysis import LeadAnalysisResult
-from app.schemas.company import CompanyCreate, CompanyUpdate
-from app.schemas.lead import LeadCreate
+from app.schemas.analysis import GeneratedResponse, LeadAnalysisResult
+from app.schemas.company import CompanyCreate, CompanyUpdate, Product
+from app.schemas.lead import LandingPageLeadCreate, LeadCreate, WhatsAppLeadCreate
 
 VALID_ANALYSIS = dict(
     qualification="qualified",
@@ -60,6 +60,26 @@ def test_company_create_accepts_minimal_payload():
 
     assert company.pain_points == []
     assert company.average_ticket is None
+    assert company.products == []
+
+
+def test_company_create_accepts_products():
+    company = CompanyCreate(
+        name="Acme Sales",
+        products=[
+            {"name": "Acme CRM", "description": "Gestao de funil comercial"},
+            {"name": "Acme Onboarding"},
+        ],
+    )
+
+    assert len(company.products) == 2
+    assert company.products[0] == Product(name="Acme CRM", description="Gestao de funil comercial")
+    assert company.products[1].description is None
+
+
+def test_product_rejects_empty_name():
+    with pytest.raises(ValidationError):
+        Product(name="")
 
 
 def test_company_create_rejects_negative_average_ticket():
@@ -96,3 +116,39 @@ def test_company_update_accepts_partial_payload():
     assert update.communication_tone == "casual"
     assert update.name is None
     assert update.pain_points is None
+    assert update.products is None
+
+
+def test_whatsapp_lead_create_accepts_minimal_payload_without_email():
+    lead = WhatsAppLeadCreate(name="Joao", phone="+5511999999999", message="Oi, quero saber mais")
+
+    assert lead.phone == "+5511999999999"
+    assert not hasattr(lead, "email")
+
+
+def test_whatsapp_lead_create_rejects_empty_phone():
+    with pytest.raises(ValidationError):
+        WhatsAppLeadCreate(name="Joao", phone="", message="mensagem")
+
+
+def test_landing_page_lead_create_requires_email():
+    with pytest.raises(ValidationError):
+        LandingPageLeadCreate(name="Joao", email="not-an-email", message="mensagem")
+
+
+def test_landing_page_lead_create_accepts_payload_without_phone():
+    lead = LandingPageLeadCreate(name="Joao", email="joao@example.com", message="mensagem")
+
+    assert lead.phone is None
+
+
+def test_generated_response_accepts_valid_payload():
+    generated = GeneratedResponse(response="Oi, tudo bem?", call_script="Abrir agradecendo o contato.")
+
+    assert generated.response
+    assert generated.call_script
+
+
+def test_generated_response_rejects_empty_call_script():
+    with pytest.raises(ValidationError):
+        GeneratedResponse(response="Oi, tudo bem?", call_script="")

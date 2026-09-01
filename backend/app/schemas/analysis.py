@@ -22,6 +22,17 @@ class LeadAnalysisResult(BaseModel):
     recommended_action: RecommendedAction
 
 
+class GeneratedResponse(BaseModel):
+    """Saída estruturada esperada do LLM no node `generate_response` (SPEC.md secao 13/15).
+
+    `response` é formatado de acordo com o canal do lead (WhatsApp: texto curto; demais:
+    formato de email) — a formatação é instrução de prompt, não branching no grafo.
+    """
+
+    response: str = Field(min_length=1)
+    call_script: str = Field(min_length=1)
+
+
 class AnalyzeResponse(BaseModel):
     """Corpo de resposta de POST /leads/{lead_id}/analyze (SPEC.md secao 21)."""
 
@@ -42,4 +53,5 @@ class AnalysisRead(BaseModel):
     reasons: list[str]
     recommended_action: RecommendedAction
     response: str | None
+    call_script: str | None
     created_at: datetime

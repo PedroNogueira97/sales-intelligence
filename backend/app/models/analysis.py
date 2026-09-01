@@ -37,4 +37,5 @@ class Analysis(Base):
         nullable=False,
     )
     response: Mapped[str | None] = mapped_column(String, nullable=True)
+    call_script: Mapped[str | None] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
