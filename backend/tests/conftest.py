@@ -3,9 +3,12 @@ import tempfile
 
 import pgserver
 import pytest
+from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from app.core.db import get_db
+from app.main import app
 from app.models import Base
 
 
@@ -39,3 +42,14 @@ def db_session(engine):
             session.execute(table.delete())
         session.commit()
         session.close()
+
+
+@pytest.fixture
+def client(db_session):
+    def _override_get_db():
+        yield db_session
+
+    app.dependency_overrides[get_db] = _override_get_db
+    with TestClient(app) as test_client:
+        yield test_client
+    app.dependency_overrides.clear()
