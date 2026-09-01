@@ -12,9 +12,8 @@ def _create_company(client, **overrides):
     return client.post("/companies", json=payload).json()
 
 
-def _create_lead(client, company_id, **overrides):
+def _create_lead(client, **overrides):
     payload = {
-        "company_id": company_id,
         "name": "Joao",
         "email": "joao@example.com",
         "message": "Preciso de ajuda com meus leads, temos 50 funcionarios.",
@@ -53,8 +52,8 @@ def _result(
 
 
 def test_analyze_qualified_lead_persists_high_score_and_schedules_demo(client, db_session, monkeypatch):
-    company = _create_company(client)
-    lead = _create_lead(client, company["id"])
+    _create_company(client)
+    lead = _create_lead(client)
     _mock_run_lead_analysis(
         monkeypatch,
         _result(score=90, qualification=Qualification.QUALIFIED, confidence=0.9, recommended_action=RecommendedAction.DISCARD),
@@ -84,8 +83,8 @@ def test_analyze_qualified_lead_persists_high_score_and_schedules_demo(client, d
 
 
 def test_analyze_unqualified_lead_results_in_low_priority_and_discard(client, monkeypatch):
-    company = _create_company(client)
-    lead = _create_lead(client, company["id"], message="Só olhando, sem interesse real.")
+    _create_company(client)
+    lead = _create_lead(client, message="Só olhando, sem interesse real.")
     _mock_run_lead_analysis(
         monkeypatch,
         _result(score=10, qualification=Qualification.UNQUALIFIED, intent="low", confidence=0.9, pain_points=[]),
@@ -100,8 +99,8 @@ def test_analyze_unqualified_lead_results_in_low_priority_and_discard(client, mo
 
 
 def test_analyze_ambiguous_lead_accepts_maybe_qualification(client, monkeypatch):
-    company = _create_company(client)
-    lead = _create_lead(client, company["id"])
+    _create_company(client)
+    lead = _create_lead(client)
     _mock_run_lead_analysis(
         monkeypatch,
         _result(score=60, qualification=Qualification.MAYBE, intent="medium", confidence=0.7),
@@ -115,8 +114,8 @@ def test_analyze_ambiguous_lead_accepts_maybe_qualification(client, monkeypatch)
 
 
 def test_analyze_marks_lead_as_error_and_does_not_persist_invalid_analysis(client, db_session, monkeypatch):
-    company = _create_company(client)
-    lead = _create_lead(client, company["id"])
+    _create_company(client)
+    lead = _create_lead(client)
     _mock_run_lead_analysis(monkeypatch, result=None, exc=LLMAnalysisError("LLM indisponível"))
 
     response = client.post(f"/leads/{lead['id']}/analyze")
@@ -145,8 +144,8 @@ def test_analyze_returns_404_for_unknown_lead(client, monkeypatch):
 
 
 def test_get_analysis_returns_404_before_lead_is_analyzed(client):
-    company = _create_company(client)
-    lead = _create_lead(client, company["id"])
+    _create_company(client)
+    lead = _create_lead(client)
 
     response = client.get(f"/leads/{lead['id']}/analysis")
 
@@ -154,8 +153,8 @@ def test_get_analysis_returns_404_before_lead_is_analyzed(client):
 
 
 def test_get_analysis_reflects_persisted_result_on_reload(client, monkeypatch):
-    company = _create_company(client)
-    lead = _create_lead(client, company["id"])
+    _create_company(client)
+    lead = _create_lead(client)
     _mock_run_lead_analysis(monkeypatch, _result(), response_text="Olá, vamos agendar uma conversa?")
 
     client.post(f"/leads/{lead['id']}/analyze")

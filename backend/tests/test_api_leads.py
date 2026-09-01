@@ -11,12 +11,11 @@ def _create_company(client, **overrides):
 
 
 def test_create_lead_sets_new_status_and_records_interaction(client, db_session):
-    company = _create_company(client)
+    _create_company(client)
 
     response = client.post(
         "/leads",
         json={
-            "company_id": company["id"],
             "name": "Joao",
             "email": "joao@example.com",
             "company_name": "Prospect LTDA",
@@ -35,25 +34,20 @@ def test_create_lead_sets_new_status_and_records_interaction(client, db_session)
     assert interactions[0].type == InteractionType.LEAD_CREATED
 
 
-def test_create_lead_rejects_unknown_company(client):
+def test_create_lead_without_company_configured_returns_422(client):
     response = client.post(
         "/leads",
-        json={
-            "company_id": str(uuid.uuid4()),
-            "name": "Joao",
-            "email": "joao@example.com",
-            "message": "mensagem",
-        },
+        json={"name": "Joao", "email": "joao@example.com", "message": "mensagem"},
     )
 
-    assert response.status_code == 404
+    assert response.status_code == 422
 
 
 def test_get_lead_returns_null_analysis_when_not_analyzed(client):
-    company = _create_company(client)
+    _create_company(client)
     created = client.post(
         "/leads",
-        json={"company_id": company["id"], "name": "Joao", "email": "joao@example.com", "message": "msg"},
+        json={"name": "Joao", "email": "joao@example.com", "message": "msg"},
     ).json()
 
     response = client.get(f"/leads/{created['id']}")

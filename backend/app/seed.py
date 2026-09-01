@@ -111,16 +111,16 @@ LEADS: list[dict] = [
 def run() -> None:
     db = SessionLocal()
     try:
-        existing = company_repository.get_by_name(db, COMPANY.name)
+        existing = company_repository.get_singleton(db)
         if existing is not None:
-            print(f"Empresa '{COMPANY.name}' já existe (id={existing.id}), pulando seed.")
+            print(f"Empresa '{existing.name}' já configurada (id={existing.id}), pulando seed.")
             return
 
         company = company_service.create(db, COMPANY)
         print(f"Empresa criada: {company.name} (id={company.id})")
 
         for lead_data in LEADS:
-            lead = lead_service.create(db, LeadCreate(company_id=company.id, **lead_data))
+            lead = lead_service.create(db, LeadCreate(**lead_data))
             print(f"Lead criado: {lead.name} (id={lead.id}, status={lead.status.value})")
     finally:
         db.close()

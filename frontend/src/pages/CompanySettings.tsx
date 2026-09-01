@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { createCompany } from "../api";
+import { createCompany, getCompany, updateCompany } from "../api";
 import type { Company } from "../types";
 
-export default function NewCompany() {
+export default function CompanySettings() {
+  const [company, setCompany] = useState<Company | null>(null);
+  const [loading, setLoading] = useState(true);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [productDescription, setProductDescription] = useState("");
@@ -11,28 +13,54 @@ export default function NewCompany() {
   const [averageTicket, setAverageTicket] = useState("");
   const [painPoints, setPainPoints] = useState("");
   const [communicationTone, setCommunicationTone] = useState("");
-  const [created, setCreated] = useState<Company | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const [justCreated, setJustCreated] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  function fillForm(data: Company) {
+    setName(data.name);
+    setDescription(data.description ?? "");
+    setProductDescription(data.product_description ?? "");
+    setIdealCustomerProfile(data.ideal_customer_profile ?? "");
+    setAverageTicket(data.average_ticket?.toString() ?? "");
+    setPainPoints(data.pain_points.join(", "));
+    setCommunicationTone(data.communication_tone ?? "");
+  }
+
+  useEffect(() => {
+    getCompany()
+      .then((data) => {
+        setCompany(data);
+        if (data) fillForm(data);
+      })
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
+  }, []);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
+    setSaved(false);
     setSubmitting(true);
+    const payload = {
+      name,
+      description: description || null,
+      product_description: productDescription || null,
+      ideal_customer_profile: idealCustomerProfile || null,
+      average_ticket: averageTicket ? Number(averageTicket) : null,
+      pain_points: painPoints
+        .split(",")
+        .map((p) => p.trim())
+        .filter(Boolean),
+      communication_tone: communicationTone || null,
+    };
     try {
-      const company = await createCompany({
-        name,
-        description: description || null,
-        product_description: productDescription || null,
-        ideal_customer_profile: idealCustomerProfile || null,
-        average_ticket: averageTicket ? Number(averageTicket) : null,
-        pain_points: painPoints
-          .split(",")
-          .map((p) => p.trim())
-          .filter(Boolean),
-        communication_tone: communicationTone || null,
-      });
-      setCreated(company);
+      const wasCreate = company === null;
+      const result = wasCreate ? await createCompany(payload) : await updateCompany(payload);
+      setCompany(result);
+      setSaved(true);
+      setJustCreated(wasCreate);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -40,30 +68,15 @@ export default function NewCompany() {
     }
   }
 
-  if (created) {
-    return (
-      <section>
-        <h1>Empresa criada</h1>
-        <p>
-          <strong>{created.name}</strong> foi cadastrada com sucesso. Copie o ID abaixo para
-          cadastrar leads para esta empresa:
-        </p>
-        <code className="id-box">{created.id}</code>
-        <div className="actions">
-          <Link className="button" to="/leads/new">
-            Cadastrar lead
-          </Link>
-          <Link className="button" to="/">
-            Voltar ao dashboard
-          </Link>
-        </div>
-      </section>
-    );
-  }
+  if (loading) return <p>Carregando...</p>;
 
   return (
     <section>
-      <h1>Cadastrar empresa</h1>
+      <h1>Empresa</h1>
+      <p>
+        Este é o contexto comercial usado para analisar todos os leads: produto, perfil de
+        cliente ideal, dores e tom de comunicação. Configurado uma única vez por instalação.
+      </p>
       <form onSubmit={handleSubmit} className="form">
         <label>
           Nome *
@@ -109,10 +122,18 @@ export default function NewCompany() {
           />
         </label>
         {error && <p className="error">{error}</p>}
+        {saved && <p>Empresa salva.</p>}
         <button type="submit" disabled={submitting}>
-          {submitting ? "Salvando..." : "Salvar empresa"}
+          {submitting ? "Salvando..." : company ? "Salvar alterações" : "Salvar empresa"}
         </button>
       </form>
+      {saved && justCreated && (
+        <div className="actions">
+          <Link className="button" to="/leads/new">
+            Cadastrar lead
+          </Link>
+        </div>
+      )}
     </section>
   );
 }

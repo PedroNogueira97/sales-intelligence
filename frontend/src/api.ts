@@ -3,6 +3,7 @@ import type {
   Analysis,
   Company,
   CompanyCreate,
+  CompanyUpdate,
   Lead,
   LeadCreate,
   LeadDetail,
@@ -29,8 +30,21 @@ export function createCompany(data: CompanyCreate): Promise<Company> {
   return request<Company>("/companies", { method: "POST", body: JSON.stringify(data) });
 }
 
-export function getCompany(companyId: string): Promise<Company> {
-  return request<Company>(`/companies/${companyId}`);
+export function updateCompany(data: CompanyUpdate): Promise<Company> {
+  return request<Company>("/companies", { method: "PUT", body: JSON.stringify(data) });
+}
+
+/** Retorna a empresa configurada, ou `null` se ainda não houver nenhuma (404). */
+export async function getCompany(): Promise<Company | null> {
+  const response = await fetch(`${API_URL}/companies`, {
+    headers: { "Content-Type": "application/json" },
+  });
+  if (response.status === 404) return null;
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    throw new Error(body?.detail ?? `Erro ${response.status} ao chamar a API`);
+  }
+  return response.json() as Promise<Company>;
 }
 
 export function createLead(data: LeadCreate): Promise<Lead> {

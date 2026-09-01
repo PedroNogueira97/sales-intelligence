@@ -31,6 +31,16 @@ export interface CompanyCreate {
   communication_tone?: string | null;
 }
 
+export interface CompanyUpdate {
+  name?: string;
+  description?: string | null;
+  product_description?: string | null;
+  ideal_customer_profile?: string | null;
+  average_ticket?: number | null;
+  pain_points?: string[];
+  communication_tone?: string | null;
+}
+
 export interface Analysis {
   id: string;
   lead_id: string;
@@ -62,7 +72,6 @@ export interface LeadDetail extends Lead {
 }
 
 export interface LeadCreate {
-  company_id: string;
   name: string;
   email: string;
   company_name?: string | null;

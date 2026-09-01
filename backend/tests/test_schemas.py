@@ -1,10 +1,8 @@
-import uuid
-
 import pytest
 from pydantic import ValidationError
 
 from app.schemas.analysis import LeadAnalysisResult
-from app.schemas.company import CompanyCreate
+from app.schemas.company import CompanyCreate, CompanyUpdate
 from app.schemas.lead import LeadCreate
 
 VALID_ANALYSIS = dict(
@@ -77,7 +75,6 @@ def test_company_create_rejects_empty_name():
 def test_lead_create_rejects_invalid_email():
     with pytest.raises(ValidationError):
         LeadCreate(
-            company_id=uuid.uuid4(),
             name="Joao",
             email="not-an-email",
             message="mensagem",
@@ -87,8 +84,15 @@ def test_lead_create_rejects_invalid_email():
 def test_lead_create_rejects_empty_message():
     with pytest.raises(ValidationError):
         LeadCreate(
-            company_id=uuid.uuid4(),
             name="Joao",
             email="joao@example.com",
             message="",
         )
+
+
+def test_company_update_accepts_partial_payload():
+    update = CompanyUpdate(communication_tone="casual")
+
+    assert update.communication_tone == "casual"
+    assert update.name is None
+    assert update.pain_points is None
