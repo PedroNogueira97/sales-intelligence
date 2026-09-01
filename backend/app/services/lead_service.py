@@ -3,14 +3,23 @@ import uuid
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.core.enums import InteractionType, LeadStatus
+from app.core.enums import InteractionType, LeadChannel, LeadStatus
 from app.models import Analysis, Interaction, Lead
 from app.repositories import company_repository, lead_repository
 from app.schemas.analysis import AnalysisRead
-from app.schemas.lead import LeadCreate, LeadDetail, LeadRead
+from app.schemas.lead import LandingPageLeadCreate, LeadCreate, LeadDetail, LeadRead, WhatsAppLeadCreate
 
 
-def create(db: Session, data: LeadCreate) -> Lead:
+def create(
+    db: Session,
+    data: LeadCreate | WhatsAppLeadCreate | LandingPageLeadCreate,
+    channel: LeadChannel,
+) -> Lead:
+    """Cria um lead no canal informado.
+
+    `channel` é sempre decidido pelo endpoint que chama este service (qual rota foi usada),
+    nunca por um campo que o cliente da API escolhe (SPEC.md secao 7).
+    """
     company = company_repository.get_singleton(db)
     if company is None:
         raise HTTPException(
@@ -18,7 +27,9 @@ def create(db: Session, data: LeadCreate) -> Lead:
             detail="Configure a empresa antes de cadastrar leads.",
         )
 
-    lead = Lead(status=LeadStatus.NEW, company_id=company.id, **data.model_dump())
+    lead = Lead(
+        status=LeadStatus.NEW, company_id=company.id, channel=channel, **data.model_dump()
+    )
     lead_repository.create(db, lead)
     db.add(Interaction(lead_id=lead.id, type=InteractionType.LEAD_CREATED, payload=None))
     db.commit()

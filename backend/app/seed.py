@@ -5,6 +5,7 @@ Uso:
 """
 
 from app.core.db import SessionLocal
+from app.core.enums import LeadChannel
 from app.repositories import company_repository
 from app.schemas.company import CompanyCreate
 from app.schemas.lead import LeadCreate
@@ -120,7 +121,8 @@ def run() -> None:
         print(f"Empresa criada: {company.name} (id={company.id})")
 
         for lead_data in LEADS:
-            lead = lead_service.create(db, LeadCreate(**lead_data))
+            # canal variado nos leads de seed: ver Fase 6 do TASKS.md
+            lead = lead_service.create(db, LeadCreate(**lead_data), channel=LeadChannel.MANUAL)
             print(f"Lead criado: {lead.name} (id={lead.id}, status={lead.status.value})")
     finally:
         db.close()
