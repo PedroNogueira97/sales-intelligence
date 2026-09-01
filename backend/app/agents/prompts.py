@@ -37,9 +37,9 @@ Produza a análise estruturada deste lead.
 # lead.channel), nunca pelo LLM. Formatação é uma instrução de prompt, não um branch no grafo
 # (SPEC.md secao 16).
 CHANNEL_RESPONSE_INSTRUCTIONS = {
-    "whatsapp": (
-        "Este lead chegou via WhatsApp: escreva `response` como uma mensagem curta e direta de "
-        "WhatsApp de verdade — sem saudação formal tipo 'Prezado(a)', sem estrutura de email, "
+    "telegram": (
+        "Este lead chegou via Telegram: escreva `response` como uma mensagem curta e direta de "
+        "chat de verdade — sem saudação formal tipo 'Prezado(a)', sem estrutura de email, "
         "sem assinatura longa. Vá direto ao ponto, no tom de comunicação da empresa."
     ),
     "manual": (
