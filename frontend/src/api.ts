@@ -4,9 +4,11 @@ import type {
   Company,
   CompanyCreate,
   CompanyUpdate,
+  LandingPageLeadCreate,
   Lead,
   LeadCreate,
   LeadDetail,
+  WhatsAppLeadCreate,
 } from "./types";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
@@ -49,6 +51,16 @@ export async function getCompany(): Promise<Company | null> {
 
 export function createLead(data: LeadCreate): Promise<Lead> {
   return request<Lead>("/leads", { method: "POST", body: JSON.stringify(data) });
+}
+
+/** Simula uma mensagem recebida via WhatsApp — sem integração real (SPEC.md secao 7). */
+export function createLeadFromWhatsapp(data: WhatsAppLeadCreate): Promise<Lead> {
+  return request<Lead>("/leads/whatsapp", { method: "POST", body: JSON.stringify(data) });
+}
+
+/** Simula o envio do formulário da landing page fake (SPEC.md secao 22). */
+export function createLeadFromLandingPage(data: LandingPageLeadCreate): Promise<Lead> {
+  return request<Lead>("/leads/landing-page", { method: "POST", body: JSON.stringify(data) });
 }
 
 export function listLeads(): Promise<LeadDetail[]> {

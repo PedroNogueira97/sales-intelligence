@@ -86,6 +86,19 @@ export interface LeadCreate {
   message: string;
 }
 
+export interface WhatsAppLeadCreate {
+  name: string;
+  phone: string;
+  message: string;
+}
+
+export interface LandingPageLeadCreate {
+  name: string;
+  email: string;
+  phone?: string | null;
+  message: string;
+}
+
 export interface AnalyzeResponse {
   lead_id: string;
   status: string;
