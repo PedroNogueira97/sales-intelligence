@@ -43,6 +43,52 @@ def test_create_lead_without_company_configured_returns_422(client):
     assert response.status_code == 422
 
 
+def test_create_lead_from_whatsapp_sets_channel_and_accepts_no_email(client):
+    _create_company(client)
+
+    response = client.post(
+        "/leads/whatsapp",
+        json={"name": "Maria", "phone": "+5511988887777", "message": "Quero saber mais"},
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["channel"] == "whatsapp"
+    assert body["phone"] == "+5511988887777"
+    assert body["email"] is None
+
+
+def test_create_lead_from_whatsapp_rejects_missing_phone(client):
+    _create_company(client)
+
+    response = client.post("/leads/whatsapp", json={"name": "Maria", "message": "mensagem"})
+
+    assert response.status_code == 422
+
+
+def test_create_lead_from_landing_page_sets_channel(client):
+    _create_company(client)
+
+    response = client.post(
+        "/leads/landing-page",
+        json={"name": "Carlos", "email": "carlos@example.com", "message": "Interessado"},
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["channel"] == "landing_page"
+    assert body["email"] == "carlos@example.com"
+    assert body["phone"] is None
+
+
+def test_create_lead_from_landing_page_rejects_missing_email(client):
+    _create_company(client)
+
+    response = client.post("/leads/landing-page", json={"name": "Carlos", "message": "mensagem"})
+
+    assert response.status_code == 422
+
+
 def test_get_lead_returns_null_analysis_when_not_analyzed(client):
     _create_company(client)
     created = client.post(

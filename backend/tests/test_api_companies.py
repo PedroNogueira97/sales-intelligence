@@ -5,7 +5,28 @@ def test_create_company_returns_201(client):
     body = response.json()
     assert body["name"] == "Acme Sales"
     assert body["pain_points"] == []
+    assert body["products"] == []
     assert "id" in body
+
+
+def test_create_company_persists_products(client):
+    response = client.post(
+        "/companies",
+        json={
+            "name": "Acme Sales",
+            "products": [
+                {"name": "Acme CRM", "description": "Gestao de funil comercial"},
+                {"name": "Acme Onboarding"},
+            ],
+        },
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["products"] == [
+        {"name": "Acme CRM", "description": "Gestao de funil comercial"},
+        {"name": "Acme Onboarding", "description": None},
+    ]
 
 
 def test_create_company_rejects_empty_name(client):
@@ -58,3 +79,16 @@ def test_update_company_returns_404_when_not_configured(client):
     response = client.put("/companies", json={"communication_tone": "casual"})
 
     assert response.status_code == 404
+
+
+def test_update_company_persists_products(client):
+    client.post("/companies", json={"name": "Acme Sales"})
+
+    response = client.put(
+        "/companies",
+        json={"products": [{"name": "Acme CRM", "description": "Gestao de funil comercial"}]},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["products"] == [{"name": "Acme CRM", "description": "Gestao de funil comercial"}]
