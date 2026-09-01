@@ -11,10 +11,14 @@ from app.schemas.lead import LeadCreate, LeadDetail, LeadRead
 
 
 def create(db: Session, data: LeadCreate) -> Lead:
-    if company_repository.get_by_id(db, data.company_id) is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Empresa não encontrada")
+    company = company_repository.get_singleton(db)
+    if company is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Configure a empresa antes de cadastrar leads.",
+        )
 
-    lead = Lead(status=LeadStatus.NEW, **data.model_dump())
+    lead = Lead(status=LeadStatus.NEW, company_id=company.id, **data.model_dump())
     lead_repository.create(db, lead)
     db.add(Interaction(lead_id=lead.id, type=InteractionType.LEAD_CREATED, payload=None))
     db.commit()

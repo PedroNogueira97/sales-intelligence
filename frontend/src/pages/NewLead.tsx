@@ -1,10 +1,9 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { createLead } from "../api";
 
 export default function NewLead() {
   const navigate = useNavigate();
-  const [companyId, setCompanyId] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [companyName, setCompanyName] = useState("");
@@ -18,7 +17,6 @@ export default function NewLead() {
     setSubmitting(true);
     try {
       const lead = await createLead({
-        company_id: companyId,
         name,
         email,
         company_name: companyName || null,
@@ -32,19 +30,12 @@ export default function NewLead() {
     }
   }
 
+  const needsCompanySetup = error?.includes("Configure a empresa");
+
   return (
     <section>
       <h1>Cadastrar lead</h1>
       <form onSubmit={handleSubmit} className="form">
-        <label>
-          ID da empresa *
-          <input
-            value={companyId}
-            onChange={(e) => setCompanyId(e.target.value)}
-            placeholder="cole aqui o ID mostrado ao cadastrar a empresa"
-            required
-          />
-        </label>
         <label>
           Nome *
           <input value={name} onChange={(e) => setName(e.target.value)} required />
@@ -66,7 +57,11 @@ export default function NewLead() {
             required
           />
         </label>
-        {error && <p className="error">{error}</p>}
+        {error && (
+          <p className="error">
+            {error} {needsCompanySetup && <Link to="/companies">Configurar empresa</Link>}
+          </p>
+        )}
         <button type="submit" disabled={submitting}>
           {submitting ? "Salvando..." : "Salvar lead"}
         </button>

@@ -100,9 +100,10 @@ Acesse `http://localhost:5173`.
 
 ### 5. Testar o fluxo completo
 
-No frontend: Dashboard → "Cadastrar empresa" (copie o ID mostrado) → "Cadastrar lead" (cole o ID
-da empresa) → abra o lead → "Executar análise" → veja score, motivos, dores, próxima ação e
-resposta sugerida. Ou pule os cadastros e use os leads do seed em "Leads".
+No frontend: Dashboard → "Empresa" (configure uma única vez o contexto comercial: produto, ICP,
+dores, tom — usado para analisar todos os leads) → "Novo lead" (só nome, email, empresa do lead
+e mensagem, sem precisar de nenhum ID) → abra o lead → "Executar análise" → veja score, motivos,
+dores, próxima ação e resposta sugerida. Ou pule os cadastros e use os leads do seed em "Leads".
 
 **Atenção**: "Executar análise" faz uma chamada real à API da OpenAI (custo e latência reais,
 ~5-10s por análise).
@@ -138,8 +139,9 @@ acima.
 ## API
 
 ```text
-POST /companies                    cria empresa
-GET  /companies/{company_id}       retorna empresa
+POST /companies                    cria a empresa (única por instalação; 409 se já existir)
+GET  /companies                    retorna a empresa configurada (404 se ainda não existir)
+PUT  /companies                    atualiza a empresa configurada
 
 POST /leads                        cria lead (status inicial "new")
 GET  /leads                        lista leads, ordenados por score desc

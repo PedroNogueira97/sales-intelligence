@@ -8,7 +8,6 @@ from app.schemas.analysis import AnalysisRead
 
 
 class LeadCreate(BaseModel):
-    company_id: uuid.UUID
     name: str = Field(min_length=1, max_length=255)
     email: EmailStr
     company_name: str | None = None
