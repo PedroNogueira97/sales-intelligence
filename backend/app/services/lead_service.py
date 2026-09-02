@@ -44,6 +44,14 @@ def get(db: Session, lead_id: uuid.UUID) -> Lead:
     return lead
 
 
+def add_message(db: Session, lead_id: uuid.UUID, content: str) -> LeadDetail:
+    """Registra manualmente mais uma interação (SPEC.md secao 8) — usado pra canais sem
+    recebimento automático (`manual`/`landing_page`; também aceito pra `telegram`)."""
+    lead = get(db, lead_id)
+    lead_message_repository.create(db, LeadMessage(lead_id=lead.id, content=content))
+    return get_detail(db, lead_id)
+
+
 def get_detail(db: Session, lead_id: uuid.UUID) -> LeadDetail:
     lead = get(db, lead_id)
     analysis = lead_repository.get_latest_analysis(db, lead_id)

@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.core.db import get_db
 from app.core.enums import LeadChannel
 from app.schemas.analysis import AnalysisRead, AnalyzeResponse
-from app.schemas.lead import LandingPageLeadCreate, LeadCreate, LeadDetail, LeadRead
+from app.schemas.lead import AddLeadMessage, LandingPageLeadCreate, LeadCreate, LeadDetail, LeadRead
 from app.services import analysis_service, lead_service
 
 router = APIRouter(prefix="/leads", tags=["leads"])
@@ -33,6 +33,14 @@ def list_leads(db: Session = Depends(get_db)) -> list[LeadDetail]:
 @router.get("/{lead_id}", response_model=LeadDetail)
 def get_lead(lead_id: uuid.UUID, db: Session = Depends(get_db)) -> LeadDetail:
     return lead_service.get_detail(db, lead_id)
+
+
+@router.post("/{lead_id}/messages", response_model=LeadDetail)
+def add_lead_message(
+    lead_id: uuid.UUID, data: AddLeadMessage, db: Session = Depends(get_db)
+) -> LeadDetail:
+    """Registra manualmente mais uma interação no histórico do lead (SPEC.md secao 8)."""
+    return lead_service.add_message(db, lead_id, data.content)
 
 
 @router.post("/{lead_id}/analyze", response_model=AnalyzeResponse)
