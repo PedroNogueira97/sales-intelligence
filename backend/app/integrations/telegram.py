@@ -17,8 +17,19 @@ def get_updates(offset: int, timeout: int = 30) -> list[dict]:
     que isso pra nao cortar a conexao antes da resposta do servidor.
     """
     url = f"{_BASE_URL}/bot{settings.telegram_bot_token}/getUpdates"
-    response = httpx.get(url, params={"offset": offset, "timeout": timeout}, timeout=timeout + 10)
-    response.raise_for_status()
+    try:
+        response = httpx.get(url, params={"offset": offset, "timeout": timeout}, timeout=timeout + 10)
+        response.raise_for_status()
+    except httpx.HTTPStatusError as exc:
+        # a excecao padrao do httpx inclui a URL da requisicao (com o token) na mensagem — nunca
+        # deixar isso subir pro log; propaga só o status code.
+        raise RuntimeError(
+            f"Telegram Bot API respondeu {exc.response.status_code}"
+        ) from None
+    except httpx.HTTPError as exc:
+        # idem: erros de rede do httpx também costumam incluir a URL requisitada na mensagem.
+        raise RuntimeError(f"Falha de rede ao chamar a Telegram Bot API: {type(exc).__name__}") from None
+
     body = response.json()
     if not body.get("ok"):
         # nunca logar o token (esta so na URL, nao no corpo da resposta) — so o payload de erro.
