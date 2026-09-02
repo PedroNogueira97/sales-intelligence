@@ -42,3 +42,18 @@ def decide_recommended_action(
     if qualification == Qualification.UNQUALIFIED:
         return RecommendedAction.DISCARD
     return RecommendedAction.NURTURING
+
+
+MIN_CONTEXT_CHARACTERS = 40
+MIN_MESSAGE_COUNT = 3
+
+
+def has_sufficient_context(messages: list[str]) -> bool:
+    """Decide, sem envolver o LLM, se o histórico de um lead já tem contexto suficiente pra
+    valer a pena analisar (SPEC.md seção 9).
+
+    Uma mensagem isolada tipo "oi, tenho interesse" não deveria gerar uma análise — o sistema
+    decide isso, não o LLM (CLAUDE.md princípio 1).
+    """
+    total_characters = sum(len(message.strip()) for message in messages)
+    return total_characters >= MIN_CONTEXT_CHARACTERS or len(messages) >= MIN_MESSAGE_COUNT

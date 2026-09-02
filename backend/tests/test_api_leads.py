@@ -79,6 +79,77 @@ def test_get_lead_returns_null_analysis_when_not_analyzed(client):
     assert response.json()["analysis"] is None
 
 
+def test_get_lead_exposes_message_history_and_sufficient_context(client):
+    _create_company(client)
+    created = client.post(
+        "/leads",
+        json={
+            "name": "Joao",
+            "email": "joao@example.com",
+            "message": "Preciso de ajuda com meus leads, temos 50 funcionarios.",
+        },
+    ).json()
+
+    response = client.get(f"/leads/{created['id']}")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["has_sufficient_context"] is True
+    assert len(body["messages"]) == 1
+    assert body["messages"][0]["content"] == "Preciso de ajuda com meus leads, temos 50 funcionarios."
+
+
+def test_get_lead_flags_insufficient_context_for_short_message(client):
+    _create_company(client)
+    created = client.post(
+        "/leads",
+        json={"name": "Joao", "email": "joao@example.com", "message": "oi, tenho interesse"},
+    ).json()
+
+    response = client.get(f"/leads/{created['id']}")
+
+    assert response.status_code == 200
+    assert response.json()["has_sufficient_context"] is False
+
+
+def test_add_message_flips_insufficient_context_to_sufficient(client):
+    _create_company(client)
+    created = client.post(
+        "/leads",
+        json={"name": "Joao", "email": "joao@example.com", "message": "oi, tenho interesse"},
+    ).json()
+    assert client.get(f"/leads/{created['id']}").json()["has_sufficient_context"] is False
+
+    response = client.post(
+        f"/leads/{created['id']}/messages",
+        json={"content": "na verdade quero saber sobre o plano para 50 pessoas"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["has_sufficient_context"] is True
+    assert len(body["messages"]) == 2
+    assert body["messages"][1]["content"] == "na verdade quero saber sobre o plano para 50 pessoas"
+
+
+def test_add_message_returns_404_for_unknown_lead(client):
+    response = client.post(f"/leads/{uuid.uuid4()}/messages", json={"content": "oi"})
+
+    assert response.status_code == 404
+
+
+def test_add_message_rejects_empty_content(client):
+    _create_company(client)
+    created = client.post(
+        "/leads",
+        json={"name": "Joao", "email": "joao@example.com", "message": "mensagem"},
+    ).json()
+
+    response = client.post(f"/leads/{created['id']}/messages", json={"content": ""})
+
+    assert response.status_code == 422
+
+
 def test_get_lead_returns_404_when_not_found(client):
     response = client.get(f"/leads/{uuid.uuid4()}")
 

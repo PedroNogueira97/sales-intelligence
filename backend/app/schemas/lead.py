@@ -42,7 +42,24 @@ class LeadRead(BaseModel):
     updated_at: datetime
 
 
-class LeadDetail(LeadRead):
-    """Usado por GET /leads/{lead_id}: lead + análise mais recente, se existir."""
+class LeadMessageRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
 
+    id: uuid.UUID
+    content: str
+    created_at: datetime
+
+
+class AddLeadMessage(BaseModel):
+    """Registro manual de mais uma interação (`POST /leads/{lead_id}/messages`, SPEC.md secao 8)
+    — usado pra canais sem recebimento automático (`manual`/`landing_page`)."""
+
+    content: str = Field(min_length=1)
+
+
+class LeadDetail(LeadRead):
+    """Usado por GET /leads/{lead_id} e GET /leads: lead + histórico + análise mais recente."""
+
+    has_sufficient_context: bool
+    messages: list[LeadMessageRead]
     analysis: AnalysisRead | None = None

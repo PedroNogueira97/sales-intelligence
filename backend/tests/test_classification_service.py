@@ -1,7 +1,11 @@
 import pytest
 
 from app.core.enums import Qualification, RecommendedAction
-from app.services.classification_service import classify_priority, decide_recommended_action
+from app.services.classification_service import (
+    classify_priority,
+    decide_recommended_action,
+    has_sufficient_context,
+)
 
 
 @pytest.mark.parametrize(
@@ -57,3 +61,33 @@ def test_decide_recommended_action_confidence_takes_priority_over_score_band():
     low_confidence = decide_recommended_action(score=10, qualification=Qualification.UNQUALIFIED, confidence=0.2)
 
     assert low_confidence == RecommendedAction.ASK_MORE_INFORMATION
+
+
+def test_has_sufficient_context_rejects_empty_history():
+    assert has_sufficient_context([]) is False
+
+
+def test_has_sufficient_context_rejects_short_greeting():
+    assert has_sufficient_context(["oi, tenho interesse"]) is False
+
+
+@pytest.mark.parametrize("length", [39])
+def test_has_sufficient_context_rejects_just_below_character_threshold(length):
+    assert has_sufficient_context(["a" * length]) is False
+
+
+@pytest.mark.parametrize("length", [40, 41, 100])
+def test_has_sufficient_context_accepts_at_or_above_character_threshold(length):
+    assert has_sufficient_context(["a" * length]) is True
+
+
+def test_has_sufficient_context_ignores_leading_trailing_whitespace():
+    assert has_sufficient_context(["   "]) is False
+
+
+def test_has_sufficient_context_rejects_two_short_messages():
+    assert has_sufficient_context(["oi", "tudo bem?"]) is False
+
+
+def test_has_sufficient_context_accepts_three_short_messages_even_if_short():
+    assert has_sufficient_context(["oi", "tudo bem?", "sim"]) is True
