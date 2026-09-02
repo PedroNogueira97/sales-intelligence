@@ -1,4 +1,7 @@
 import logging
+import threading
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -6,10 +9,29 @@ from fastapi.responses import JSONResponse
 
 from app.api.companies import router as companies_router
 from app.api.leads import router as leads_router
+from app.core.config import settings
+from app.integrations.telegram_polling import run_polling_loop
 
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Sales Intelligence API")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    stop_event = threading.Event()
+    thread: threading.Thread | None = None
+    if settings.telegram_bot_token:
+        thread = threading.Thread(target=run_polling_loop, args=(stop_event,), daemon=True)
+        thread.start()
+        logger.info("Thread de polling do Telegram iniciada.")
+    else:
+        logger.info("TELEGRAM_BOT_TOKEN não configurado — polling do Telegram desativado.")
+    yield
+    stop_event.set()
+    if thread is not None:
+        thread.join(timeout=5)
+
+
+app = FastAPI(title="Sales Intelligence API", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     # MVP local: frontend Vite roda em portas fixas de dev, sem domínio de produção ainda.
