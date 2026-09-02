@@ -13,12 +13,12 @@ const RECOMMENDED_ACTION_LABEL: Record<string, string> = {
 
 const CHANNEL_LABEL: Record<string, string> = {
   manual: "Manual",
-  whatsapp: "WhatsApp",
+  telegram: "Telegram",
   landing_page: "Landing page",
 };
 
 const RESPONSE_FORMAT_LABEL: Record<string, string> = {
-  whatsapp: "WhatsApp",
+  telegram: "Telegram",
   manual: "Email",
   landing_page: "Email",
 };

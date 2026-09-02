@@ -1,7 +1,7 @@
 import uuid
 
 from app.agents.exceptions import LLMAnalysisError
-from app.core.enums import InteractionType, LeadStatus, Qualification, RecommendedAction
+from app.core.enums import InteractionType, LeadChannel, LeadStatus, Qualification, RecommendedAction
 from app.models import Analysis, Interaction, Lead
 from app.schemas.analysis import LeadAnalysisResult
 
@@ -142,11 +142,19 @@ def test_analyze_marks_lead_as_error_and_does_not_persist_invalid_analysis(clien
     assert InteractionType.ANALYSIS_FAILED in interaction_types
 
 
-def test_analyze_passes_lead_channel_to_graph(client, monkeypatch):
-    _create_company(client)
-    lead = client.post(
-        "/leads/whatsapp", json={"name": "Maria", "phone": "+5511988887777", "message": "Oi"}
-    ).json()
+def test_analyze_passes_lead_channel_to_graph(client, db_session, monkeypatch):
+    company_id = uuid.UUID(_create_company(client)["id"])
+    # canal telegram é criado pelo polling em background (Fase 5), não por um endpoint REST —
+    # aqui só precisamos de um lead com esse canal pra testar o repasse ao grafo.
+    lead = Lead(
+        company_id=company_id,
+        name="Maria",
+        telegram_chat_id="123456789",
+        message="Oi",
+        channel=LeadChannel.TELEGRAM,
+    )
+    db_session.add(lead)
+    db_session.commit()
 
     received_channels = []
 
@@ -156,9 +164,9 @@ def test_analyze_passes_lead_channel_to_graph(client, monkeypatch):
 
     monkeypatch.setattr("app.services.analysis_service.run_lead_analysis", _fake)
 
-    client.post(f"/leads/{lead['id']}/analyze")
+    client.post(f"/leads/{lead.id}/analyze")
 
-    assert received_channels == ["whatsapp"]
+    assert received_channels == ["telegram"]
 
 
 def test_analyze_returns_404_for_unknown_lead(client, monkeypatch):

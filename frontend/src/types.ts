@@ -1,5 +1,5 @@
 export type LeadStatus = "new" | "processing" | "analyzed" | "error";
-export type LeadChannel = "manual" | "whatsapp" | "landing_page";
+export type LeadChannel = "manual" | "telegram" | "landing_page";
 export type Qualification = "qualified" | "maybe" | "unqualified";
 export type Intent = "high" | "medium" | "low" | "unknown";
 export type RecommendedAction =
@@ -71,6 +71,7 @@ export interface Lead {
   name: string;
   email: string | null;
   phone: string | null;
+  telegram_chat_id: string | null;
   company_name: string | null;
   message: string;
   channel: LeadChannel;
@@ -87,12 +88,6 @@ export interface LeadCreate {
   name: string;
   email: string;
   company_name?: string | null;
-  message: string;
-}
-
-export interface WhatsAppLeadCreate {
-  name: string;
-  phone: string;
   message: string;
 }
 

@@ -87,7 +87,7 @@ def test_run_lead_analysis_returns_valid_structured_result_and_call_script(monke
     assert call_script == VALID_GENERATED.call_script
 
 
-@pytest.mark.parametrize("channel", ["manual", "whatsapp", "landing_page"])
+@pytest.mark.parametrize("channel", ["manual", "telegram", "landing_page"])
 def test_run_lead_analysis_works_for_every_channel(monkeypatch, channel):
     _patch_llm(monkeypatch, analysis_result=VALID_ANALYSIS, response_result=VALID_GENERATED)
 
@@ -120,7 +120,7 @@ def test_run_lead_analysis_raises_llm_analysis_error_when_response_generation_fa
 @pytest.mark.parametrize(
     ("channel", "expected_snippet"),
     [
-        ("whatsapp", "mensagem curta e direta de WhatsApp"),
+        ("telegram", "mensagem curta e direta de chat"),
         ("manual", "formato de email"),
         ("landing_page", "formato de email"),
     ],

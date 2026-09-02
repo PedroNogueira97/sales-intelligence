@@ -3,7 +3,7 @@ from pydantic import ValidationError
 
 from app.schemas.analysis import GeneratedResponse, LeadAnalysisResult
 from app.schemas.company import CompanyCreate, CompanyUpdate, Product
-from app.schemas.lead import LandingPageLeadCreate, LeadCreate, WhatsAppLeadCreate
+from app.schemas.lead import LandingPageLeadCreate, LeadCreate
 
 VALID_ANALYSIS = dict(
     qualification="qualified",
@@ -117,18 +117,6 @@ def test_company_update_accepts_partial_payload():
     assert update.name is None
     assert update.pain_points is None
     assert update.products is None
-
-
-def test_whatsapp_lead_create_accepts_minimal_payload_without_email():
-    lead = WhatsAppLeadCreate(name="Joao", phone="+5511999999999", message="Oi, quero saber mais")
-
-    assert lead.phone == "+5511999999999"
-    assert not hasattr(lead, "email")
-
-
-def test_whatsapp_lead_create_rejects_empty_phone():
-    with pytest.raises(ValidationError):
-        WhatsAppLeadCreate(name="Joao", phone="", message="mensagem")
 
 
 def test_landing_page_lead_create_requires_email():

@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.core.db import get_db
 from app.core.enums import LeadChannel
 from app.schemas.analysis import AnalysisRead, AnalyzeResponse
-from app.schemas.lead import LandingPageLeadCreate, LeadCreate, LeadDetail, LeadRead, WhatsAppLeadCreate
+from app.schemas.lead import LandingPageLeadCreate, LeadCreate, LeadDetail, LeadRead
 from app.services import analysis_service, lead_service
 
 router = APIRouter(prefix="/leads", tags=["leads"])
@@ -15,12 +15,6 @@ router = APIRouter(prefix="/leads", tags=["leads"])
 @router.post("", response_model=LeadRead, status_code=status.HTTP_201_CREATED)
 def create_lead(data: LeadCreate, db: Session = Depends(get_db)) -> LeadRead:
     return lead_service.create(db, data, channel=LeadChannel.MANUAL)
-
-
-@router.post("/whatsapp", response_model=LeadRead, status_code=status.HTTP_201_CREATED)
-def create_lead_from_whatsapp(data: WhatsAppLeadCreate, db: Session = Depends(get_db)) -> LeadRead:
-    """Simula uma mensagem recebida via WhatsApp (SPEC.md secao 7) — sem integração real."""
-    return lead_service.create(db, data, channel=LeadChannel.WHATSAPP)
 
 
 @router.post("/landing-page", response_model=LeadRead, status_code=status.HTTP_201_CREATED)

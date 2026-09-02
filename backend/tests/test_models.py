@@ -87,15 +87,15 @@ def test_lead_defaults_to_manual_channel(db_session):
     assert lead.channel == LeadChannel.MANUAL
 
 
-def test_lead_accepts_whatsapp_channel_without_email(db_session):
+def test_lead_accepts_telegram_channel_without_email(db_session):
     company = _make_company(db_session)
     lead = _make_lead(
-        db_session, company, channel=LeadChannel.WHATSAPP, email=None, phone="+5511999999999"
+        db_session, company, channel=LeadChannel.TELEGRAM, email=None, telegram_chat_id="123456789"
     )
 
-    assert lead.channel == LeadChannel.WHATSAPP
+    assert lead.channel == LeadChannel.TELEGRAM
     assert lead.email is None
-    assert lead.phone == "+5511999999999"
+    assert lead.telegram_chat_id == "123456789"
 
 
 def test_lead_requires_existing_company(db_session):

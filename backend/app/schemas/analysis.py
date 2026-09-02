@@ -25,7 +25,7 @@ class LeadAnalysisResult(BaseModel):
 class GeneratedResponse(BaseModel):
     """Saída estruturada esperada do LLM no node `generate_response` (SPEC.md secao 13/15).
 
-    `response` é formatado de acordo com o canal do lead (WhatsApp: texto curto; demais:
+    `response` é formatado de acordo com o canal do lead (Telegram: texto curto; demais:
     formato de email) — a formatação é instrução de prompt, não branching no grafo.
     """
 

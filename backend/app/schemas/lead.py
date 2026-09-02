@@ -16,14 +16,6 @@ class LeadCreate(BaseModel):
     message: str = Field(min_length=1)
 
 
-class WhatsAppLeadCreate(BaseModel):
-    """Simula uma mensagem recebida via WhatsApp (`POST /leads/whatsapp`) — sem email."""
-
-    name: str = Field(min_length=1, max_length=255)
-    phone: str = Field(min_length=1, max_length=50)
-    message: str = Field(min_length=1)
-
-
 class LandingPageLeadCreate(BaseModel):
     """Simula o envio do formulário da landing page fake (`POST /leads/landing-page`)."""
 
@@ -41,6 +33,7 @@ class LeadRead(BaseModel):
     name: str
     email: str | None
     phone: str | None
+    telegram_chat_id: str | None
     company_name: str | None
     message: str
     channel: LeadChannel

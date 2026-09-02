@@ -9,10 +9,10 @@ class LeadStatus(str, enum.Enum):
 
 
 class LeadChannel(str, enum.Enum):
-    """Origem simulada do lead (SPEC.md secao 7) — decidida pelo backend, nunca pelo cliente."""
+    """Origem do lead (SPEC.md secao 7) — decidida pelo backend, nunca pelo cliente."""
 
     MANUAL = "manual"
-    WHATSAPP = "whatsapp"
+    TELEGRAM = "telegram"
     LANDING_PAGE = "landing_page"
 
 

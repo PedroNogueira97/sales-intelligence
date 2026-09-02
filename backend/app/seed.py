@@ -8,7 +8,7 @@ from app.core.db import SessionLocal
 from app.core.enums import LeadChannel
 from app.repositories import company_repository
 from app.schemas.company import CompanyCreate
-from app.schemas.lead import LandingPageLeadCreate, LeadCreate, WhatsAppLeadCreate
+from app.schemas.lead import LandingPageLeadCreate, LeadCreate
 from app.services import company_service, lead_service
 
 COMPANY = CompanyCreate(
@@ -27,13 +27,11 @@ COMPANY = CompanyCreate(
 
 _SCHEMA_BY_CHANNEL = {
     LeadChannel.MANUAL: LeadCreate,
-    LeadChannel.WHATSAPP: WhatsAppLeadCreate,
     LeadChannel.LANDING_PAGE: LandingPageLeadCreate,
 }
 
-# Cada lead cobre um cenário de SPEC.md secao 29, com canal variado (manual/whatsapp/landing_page)
-# — os campos disponíveis mudam por canal (WhatsApp não tem email, nenhum dos dois simulados tem
-# company_name, ver schemas em app/schemas/lead.py).
+# Cada lead cobre um cenário de SPEC.md secao 29, com canal variado (manual/landing_page — o
+# canal telegram não é simulado no seed, depende de mensagens reais chegando pelo bot).
 LEADS: list[dict] = [
     # 1. claramente qualificado — manual
     {
@@ -47,11 +45,11 @@ LEADS: list[dict] = [
             "o quanto antes, temos orçamento aprovado para esse trimestre."
         ),
     },
-    # 2. claramente fora do ICP — whatsapp
+    # 2. claramente fora do ICP — landing page
     {
-        "channel": LeadChannel.WHATSAPP,
+        "channel": LeadChannel.LANDING_PAGE,
         "name": "Pedro Lima",
-        "phone": "+5511911112222",
+        "email": "pedro@microloja.com",
         "message": "Oi, sou autônomo, vendo produtos artesanais sozinho, vi o anúncio de vocês. Quanto custa?",
     },
     # 3. sem informações suficientes — landing page
@@ -72,11 +70,12 @@ LEADS: list[dict] = [
             "comercial para o próximo ano, ainda sem pressa, só pesquisando opções."
         ),
     },
-    # 5. alta urgência — whatsapp
+    # 5. alta urgência — manual
     {
-        "channel": LeadChannel.WHATSAPP,
+        "channel": LeadChannel.MANUAL,
         "name": "Fernanda Costa",
-        "phone": "+5511922223333",
+        "email": "fernanda@growthly.com.br",
+        "company_name": "Growthly",
         "message": (
             "Precisamos resolver isso essa semana, estamos perdendo leads todos os dias por "
             "falta de organização no funil. Temos 80 funcionários, podem me ligar hoje?"
@@ -97,11 +96,11 @@ LEADS: list[dict] = [
         "company_name": "B2B Solutions",
         "message": "Podemos agendar uma demonstração do produto para a nossa equipe comercial?",
     },
-    # 8. sem informar empresa — whatsapp
+    # 8. sem informar empresa — landing page (schema não tem campo de empresa)
     {
-        "channel": LeadChannel.WHATSAPP,
+        "channel": LeadChannel.LANDING_PAGE,
         "name": "Diego Martins",
-        "phone": "+5511933334444",
+        "email": "diego.martins@gmail.com",
         "message": "Vi vocês no LinkedIn, trabalho com vendas e queria entender melhor o produto.",
     },
     # 9. problema incompatível — landing page

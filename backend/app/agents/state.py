@@ -7,7 +7,7 @@ class LeadAnalysisState(TypedDict):
     lead_id: str
     lead_message: str
     company_context: dict
-    channel: str  # "manual" | "whatsapp" | "landing_page" (SPEC.md secao 7)
+    channel: str  # "manual" | "telegram" | "landing_page" (SPEC.md secao 7)
 
     analysis: dict | None
     response: str | None

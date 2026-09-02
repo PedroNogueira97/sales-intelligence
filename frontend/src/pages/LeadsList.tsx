@@ -12,7 +12,7 @@ const STATUS_LABEL: Record<string, string> = {
 
 const CHANNEL_LABEL: Record<string, string> = {
   manual: "Manual",
-  whatsapp: "WhatsApp",
+  telegram: "Telegram",
   landing_page: "Landing page",
 };
 

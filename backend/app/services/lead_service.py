@@ -4,17 +4,13 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.enums import InteractionType, LeadChannel, LeadStatus
-from app.models import Analysis, Interaction, Lead
-from app.repositories import company_repository, lead_repository
+from app.models import Analysis, Interaction, Lead, LeadMessage
+from app.repositories import company_repository, lead_message_repository, lead_repository
 from app.schemas.analysis import AnalysisRead
-from app.schemas.lead import LandingPageLeadCreate, LeadCreate, LeadDetail, LeadRead, WhatsAppLeadCreate
+from app.schemas.lead import LandingPageLeadCreate, LeadCreate, LeadDetail, LeadRead
 
 
-def create(
-    db: Session,
-    data: LeadCreate | WhatsAppLeadCreate | LandingPageLeadCreate,
-    channel: LeadChannel,
-) -> Lead:
+def create(db: Session, data: LeadCreate | LandingPageLeadCreate, channel: LeadChannel) -> Lead:
     """Cria um lead no canal informado.
 
     `channel` é sempre decidido pelo endpoint que chama este service (qual rota foi usada),
@@ -33,6 +29,10 @@ def create(
     lead_repository.create(db, lead)
     db.add(Interaction(lead_id=lead.id, type=InteractionType.LEAD_CREATED, payload=None))
     db.commit()
+
+    # a primeira mensagem também vira a primeira linha do histórico (SPEC.md secao 8)
+    lead_message_repository.create(db, LeadMessage(lead_id=lead.id, content=lead.message))
+
     return lead
 
 

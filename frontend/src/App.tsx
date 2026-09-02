@@ -5,7 +5,6 @@ import FakeLandingPage from "./pages/FakeLandingPage";
 import LeadDetail from "./pages/LeadDetail";
 import LeadsList from "./pages/LeadsList";
 import NewLead from "./pages/NewLead";
-import WhatsAppSimulator from "./pages/WhatsAppSimulator";
 
 function DashboardLayout() {
   return (
@@ -19,7 +18,6 @@ function DashboardLayout() {
           <Link to="/leads">Leads</Link>
           <Link to="/leads/new">Novo lead</Link>
           <Link to="/companies">Empresa</Link>
-          <Link to="/simulate/whatsapp">Simular WhatsApp</Link>
           <a href="/lp" target="_blank" rel="noreferrer">
             Landing page ↗
           </a>
@@ -45,7 +43,6 @@ export default function App() {
           <Route path="/leads" element={<LeadsList />} />
           <Route path="/leads/new" element={<NewLead />} />
           <Route path="/leads/:leadId" element={<LeadDetail />} />
-          <Route path="/simulate/whatsapp" element={<WhatsAppSimulator />} />
         </Route>
       </Routes>
     </BrowserRouter>
