@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
+import type { FormEvent } from "react";
 import { useParams } from "react-router-dom";
-import { analyzeLead, getLead } from "../api";
+import { addLeadMessage, analyzeLead, getLead } from "../api";
 import type { LeadDetail as LeadDetailType } from "../types";
 
 const RECOMMENDED_ACTION_LABEL: Record<string, string> = {
@@ -32,6 +33,8 @@ export default function LeadDetail() {
   const [isEditing, setIsEditing] = useState(false);
   const [copied, setCopied] = useState(false);
   const [copiedScript, setCopiedScript] = useState(false);
+  const [newMessage, setNewMessage] = useState("");
+  const [addingMessage, setAddingMessage] = useState(false);
 
   function load() {
     if (!leadId) return;
@@ -66,6 +69,22 @@ export default function LeadDetail() {
       setTimeout(() => setCopied(false), 2000);
     } catch {
       setError("Não foi possível copiar automaticamente. Selecione o texto manualmente.");
+    }
+  }
+
+  async function handleAddMessage(e: FormEvent) {
+    e.preventDefault();
+    if (!leadId || !newMessage.trim()) return;
+    setAddingMessage(true);
+    setError(null);
+    try {
+      const updated = await addLeadMessage(leadId, newMessage.trim());
+      setLead(updated);
+      setNewMessage("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setAddingMessage(false);
     }
   }
 
@@ -109,15 +128,52 @@ export default function LeadDetail() {
         <dd>{lead.message}</dd>
       </dl>
 
+      <div className="block">
+        <h2>HISTÓRICO DE MENSAGENS</h2>
+        <ul className="message-history">
+          {lead.messages.map((m) => (
+            <li key={m.id}>
+              <span className="message-date">{new Date(m.created_at).toLocaleString("pt-BR")}</span>
+              <p>{m.content}</p>
+            </li>
+          ))}
+        </ul>
+      </div>
+
       {error && <p className="error">{error}</p>}
 
-      {(lead.status === "new" || lead.status === "error") && (
-        <button onClick={handleAnalyze} disabled={analyzing}>
-          {analyzing ? "Analisando..." : "Executar análise"}
-        </button>
-      )}
       {lead.status === "processing" && <p>Análise em andamento...</p>}
       {lead.status === "error" && <p className="error">A última análise falhou. Tente novamente.</p>}
+
+      {(lead.status === "new" || lead.status === "error") &&
+        (lead.has_sufficient_context ? (
+          <button onClick={handleAnalyze} disabled={analyzing}>
+            {analyzing ? "Analisando..." : "Executar análise"}
+          </button>
+        ) : (
+          <div className="block insufficient-context">
+            <p>
+              Este lead ainda não tem contexto suficiente para uma análise assertiva. Registre
+              mais uma interação (ligação, email, mensagem) antes de analisar.
+            </p>
+            <form className="form" onSubmit={handleAddMessage}>
+              <label>
+                Nova interação
+                <textarea
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  rows={3}
+                  placeholder="O que o lead disse ou o que foi descoberto nesse contato..."
+                />
+              </label>
+              <div className="actions">
+                <button type="submit" disabled={addingMessage || !newMessage.trim()}>
+                  {addingMessage ? "Registrando..." : "Registrar interação"}
+                </button>
+              </div>
+            </form>
+          </div>
+        ))}
 
       {analysis && (
         <>

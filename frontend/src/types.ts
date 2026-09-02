@@ -80,8 +80,16 @@ export interface Lead {
   updated_at: string;
 }
 
+export interface LeadMessage {
+  id: string;
+  content: string;
+  created_at: string;
+}
+
 export interface LeadDetail extends Lead {
   analysis: Analysis | null;
+  has_sufficient_context: boolean;
+  messages: LeadMessage[];
 }
 
 export interface LeadCreate {

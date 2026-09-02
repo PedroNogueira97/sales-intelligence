@@ -65,6 +65,14 @@ export function getLead(leadId: string): Promise<LeadDetail> {
   return request<LeadDetail>(`/leads/${leadId}`);
 }
 
+/** Registra manualmente mais uma interação no histórico do lead (SPEC.md secao 8). */
+export function addLeadMessage(leadId: string, content: string): Promise<LeadDetail> {
+  return request<LeadDetail>(`/leads/${leadId}/messages`, {
+    method: "POST",
+    body: JSON.stringify({ content }),
+  });
+}
+
 export function analyzeLead(leadId: string): Promise<AnalyzeResponse> {
   return request<AnalyzeResponse>(`/leads/${leadId}/analyze`, { method: "POST" });
 }
