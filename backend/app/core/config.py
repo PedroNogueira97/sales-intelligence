@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     llm_provider: str = "openai"
     llm_model: str = "gpt-4o-mini"
     llm_api_key: str | None = None
+    telegram_bot_token: str | None = None
 
 
 settings = Settings()

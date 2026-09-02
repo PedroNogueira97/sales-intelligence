@@ -17,6 +17,11 @@ def get_by_id(db: Session, lead_id: uuid.UUID) -> Lead | None:
     return db.get(Lead, lead_id)
 
 
+def get_by_telegram_chat_id(db: Session, telegram_chat_id: str) -> Lead | None:
+    stmt = select(Lead).where(Lead.telegram_chat_id == telegram_chat_id)
+    return db.execute(stmt).scalars().first()
+
+
 def get_latest_analysis(db: Session, lead_id: uuid.UUID) -> Analysis | None:
     stmt = (
         select(Analysis)
