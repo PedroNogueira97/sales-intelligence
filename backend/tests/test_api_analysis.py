@@ -2,7 +2,7 @@ import uuid
 
 from app.agents.exceptions import LLMAnalysisError
 from app.core.enums import InteractionType, LeadChannel, LeadStatus, Qualification, RecommendedAction
-from app.models import Analysis, Interaction, Lead
+from app.models import Analysis, Interaction, Lead, LeadMessage
 from app.schemas.analysis import LeadAnalysisResult
 
 
@@ -91,7 +91,9 @@ def test_analyze_qualified_lead_persists_high_score_and_schedules_demo(client, d
 
 def test_analyze_unqualified_lead_results_in_low_priority_and_discard(client, monkeypatch):
     _create_company(client)
-    lead = _create_lead(client, message="Só olhando, sem interesse real.")
+    lead = _create_lead(
+        client, message="Só estou olhando por curiosidade, sem nenhum interesse real em comprar."
+    )
     _mock_run_lead_analysis(
         monkeypatch,
         _result(score=10, qualification=Qualification.UNQUALIFIED, intent="low", confidence=0.9, pain_points=[]),
@@ -150,10 +152,12 @@ def test_analyze_passes_lead_channel_to_graph(client, db_session, monkeypatch):
         company_id=company_id,
         name="Maria",
         telegram_chat_id="123456789",
-        message="Oi",
+        message="Oi, gostaria de saber mais sobre a plataforma de voces.",
         channel=LeadChannel.TELEGRAM,
     )
     db_session.add(lead)
+    db_session.commit()
+    db_session.add(LeadMessage(lead_id=lead.id, content=lead.message))
     db_session.commit()
 
     received_channels = []
@@ -167,6 +171,45 @@ def test_analyze_passes_lead_channel_to_graph(client, db_session, monkeypatch):
     client.post(f"/leads/{lead.id}/analyze")
 
     assert received_channels == ["telegram"]
+
+
+def test_analyze_returns_422_when_context_is_insufficient_and_never_calls_llm(client, monkeypatch):
+    _create_company(client)
+    lead = _create_lead(client, message="oi, tenho interesse")  # 20 chars, uma mensagem só
+
+    called = False
+
+    def _fake(*args, **kwargs):
+        nonlocal called
+        called = True
+        return _result(), "resposta", "roteiro"
+
+    monkeypatch.setattr("app.services.analysis_service.run_lead_analysis", _fake)
+
+    response = client.post(f"/leads/{lead['id']}/analyze")
+
+    assert response.status_code == 422
+    assert called is False
+
+
+def test_analyze_allowed_after_enough_messages_accumulate(client, db_session, monkeypatch):
+    _create_company(client)
+    lead = _create_lead(client, message="oi, tenho interesse")  # insuficiente sozinha
+
+    db_lead = db_session.get(Lead, uuid.UUID(lead["id"]))
+    db_session.add_all(
+        [
+            LeadMessage(lead_id=db_lead.id, content="mais uma mensagem"),
+            LeadMessage(lead_id=db_lead.id, content="e mais uma"),
+        ]
+    )
+    db_session.commit()  # 3 mensagens no total -> contexto suficiente (SPEC.md secao 9)
+
+    _mock_run_lead_analysis(monkeypatch, result=_result())
+
+    response = client.post(f"/leads/{lead['id']}/analyze")
+
+    assert response.status_code == 200
 
 
 def test_analyze_returns_404_for_unknown_lead(client, monkeypatch):

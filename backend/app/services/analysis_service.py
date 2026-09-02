@@ -8,10 +8,10 @@ from app.agents.exceptions import LLMAnalysisError
 from app.agents.graph import run_lead_analysis
 from app.core.enums import InteractionType, LeadStatus
 from app.models import Analysis, Company, Interaction, Lead
-from app.repositories import analysis_repository, company_repository, lead_repository
+from app.repositories import analysis_repository, company_repository, lead_message_repository, lead_repository
 from app.schemas.analysis import AnalysisRead
 from app.services import lead_service
-from app.services.classification_service import decide_recommended_action
+from app.services.classification_service import decide_recommended_action, has_sufficient_context
 
 logger = logging.getLogger(__name__)
 
@@ -20,20 +20,31 @@ def analyze(db: Session, lead_id: uuid.UUID) -> Lead:
     """Executa a análise do lead (SPEC.md secao 4 e 21).
 
     IA sugere, o sistema controla: o `recommended_action` persistido é decidido
-    deterministicamente (`decide_recommended_action`), não o sugerido pelo LLM.
+    deterministicamente (`decide_recommended_action`), não o sugerido pelo LLM. O gate de
+    contexto insuficiente (SPEC.md secao 9) também é decidido pelo backend, antes de qualquer
+    chamada ao LLM.
     """
     lead = lead_service.get(db, lead_id)
     company = company_repository.get_by_id(db, lead.company_id)
     if company is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Empresa não encontrada")
 
+    messages = lead_message_repository.list_by_lead(db, lead.id)
+    message_contents = [m.content for m in messages]
+    if not has_sufficient_context(message_contents):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="Aguarde mais interações do lead antes de analisar.",
+        )
+
     lead.status = LeadStatus.PROCESSING
     db.add(Interaction(lead_id=lead.id, type=InteractionType.ANALYSIS_STARTED, payload=None))
     db.commit()
 
     try:
+        combined_message = "\n".join(message_contents)
         result, response_text, call_script = run_lead_analysis(
-            lead.message, _build_company_context(company), lead.channel.value
+            combined_message, _build_company_context(company), lead.channel.value
         )
     except LLMAnalysisError as exc:
         logger.error("Falha ao analisar lead %s: %s", lead.id, exc)

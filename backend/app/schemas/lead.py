@@ -42,7 +42,17 @@ class LeadRead(BaseModel):
     updated_at: datetime
 
 
-class LeadDetail(LeadRead):
-    """Usado por GET /leads/{lead_id}: lead + análise mais recente, se existir."""
+class LeadMessageRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
 
+    id: uuid.UUID
+    content: str
+    created_at: datetime
+
+
+class LeadDetail(LeadRead):
+    """Usado por GET /leads/{lead_id} e GET /leads: lead + histórico + análise mais recente."""
+
+    has_sufficient_context: bool
+    messages: list[LeadMessageRead]
     analysis: AnalysisRead | None = None
